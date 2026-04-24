@@ -13,11 +13,25 @@ export class AnimationController
 
   init_gltf(gltf)
   {
+    this.reset();
     this.scene.add(gltf.scene);
     this.animations = gltf.animations;
 
     this.mixer = new AnimationMixer(this.scene);
     this.play_animations();
+  }
+
+  reset()
+  {
+    this.mixer.stopAllAction();
+    this.animations = [];
+
+    while (this.scene.children.length > 0)
+    {
+      this.scene.remove(this.scene.children[0]);
+    }
+
+    this.mixer = new AnimationMixer(this.scene);
   }
 
   play_animations(clamp = false)

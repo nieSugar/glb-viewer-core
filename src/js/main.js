@@ -40,12 +40,20 @@ class MainApplication
       switch (message.type)
       {
       case 'loadModelFromUri':
-        this.ui_controller.panel.contents.info.update_extension(message.dataUri);
+        this.ui_controller.panel.contents.info.update_extension(message.extension || message.dataUri);
         this.scene_controller.loadModelFromUri(message.dataUri, message.fileSize);
+        break;
+      case 'loadModelFromBinary':
+        this.ui_controller.panel.contents.info.update_extension(message.extension);
+        this.scene_controller.loadModelFromBinary(message.data, message.extension, message.fileSize);
+        break;
+      case 'loadModelFromFiles':
+        this.ui_controller.panel.contents.info.update_extension(message.extension);
+        this.scene_controller.loadModelFromFiles(message.files, message.entryFileName, message.fileSize);
         break;
       case 'loadModelFromBase64':
         this.ui_controller.panel.contents.info.update_extension(message.extension);
-        this.scene_controller.loadModelFromBase64(message.data, message.fileSize);
+        this.scene_controller.loadModelFromBase64(message.data, message.extension, message.fileSize);
         break;
       case 'setWebViewPath':
         this.scene_controller.setLibURIs(message.webview_path);

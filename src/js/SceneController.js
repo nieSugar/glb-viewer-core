@@ -129,6 +129,7 @@ class SceneController
     this.skeleton_visualizer = new SkeletonVisualizer();
     this.overlay_scene.add(this.skeleton_visualizer);
     this.scene_drawcall_count = 0;
+    this.active_object_urls = [];
   }
 
   init(ui_controller)
@@ -163,15 +164,74 @@ class SceneController
     this.loader.setMeshoptDecoder(this.meshopt_decoder);
   }
 
-  loadModelFromBase64(base64, fileSize)
+  loadModelFromBase64(base64, extension, fileSize)
   {
     this.file_size = fileSize || 0;
     const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    // Feed this into GLTFLoader instead of fetch()
-    this.loader.parse(binary.buffer, '', (gltf) =>
+    this.loadModelFromBinary(binary.buffer, extension || 'glb', this.file_size);
+  }
+
+  loadModelFromBinary(arrayBuffer, extension, fileSize)
+  {
+    if (!arrayBuffer)
+    {
+      console.error('No binary data provided for model loading');
+      return;
+    }
+
+    this.prepare_for_new_model();
+    this.file_size = fileSize || 0;
+
+    const mime_type = extension === 'gltf' ? 'model/gltf+json' : 'model/gltf-binary';
+    const object_url = this.create_object_url(new Blob([arrayBuffer], { type: mime_type }));
+
+    this.loader.load(object_url, (gltf) =>
     {
       this.on_model_loaded(gltf);
-    }, console.error);
+    }, undefined, console.error);
+  }
+
+  loadModelFromFiles(files, entryFileName, fileSize)
+  {
+    if (!Array.isArray(files) || files.length === 0 || !entryFileName)
+    {
+      console.error('Model files payload is incomplete');
+      return;
+    }
+
+    this.prepare_for_new_model();
+    this.file_size = fileSize || 0;
+
+    const resource_urls = new Map();
+
+    files.forEach(file =>
+    {
+      const object_url = this.create_object_url(new Blob([file.data], { type: file.mimeType || 'application/octet-stream' }));
+      const normalized_name = this.normalize_resource_key(file.name);
+
+      resource_urls.set(normalized_name, object_url);
+      resource_urls.set(this.get_basename(normalized_name), object_url);
+    });
+
+    const entry_file_url = resource_urls.get(this.normalize_resource_key(entryFileName)) || resource_urls.get(this.get_basename(entryFileName));
+    if (!entry_file_url)
+    {
+      console.error('Entry GLTF file was not found in the provided file list');
+      this.loader.manager.setURLModifier(url => url);
+      return;
+    }
+
+    this.loader.manager.setURLModifier(url => this.resolve_resource_url(url, resource_urls));
+
+    this.loader.load(entry_file_url, (gltf) =>
+    {
+      this.loader.manager.setURLModifier(url => url);
+      this.on_model_loaded(gltf);
+    }, undefined, (error) =>
+    {
+      this.loader.manager.setURLModifier(url => url);
+      console.error(error);
+    });
   }
 
   loadModelFromUri(dataUri, fileSize)
@@ -183,11 +243,12 @@ class SceneController
     }
     console.log('Loading model from data URI:', dataUri);
 
+    this.prepare_for_new_model();
     this.file_size = fileSize || 0;
     this.loader.load(dataUri, (gltf) =>
     {
       this.on_model_loaded(gltf);
-    });
+    }, undefined, console.error);
   }
 
   on_model_loaded(gltf)
@@ -246,6 +307,100 @@ class SceneController
     }
   }
 
+  prepare_for_new_model()
+  {
+    this.loader.manager.setURLModifier(url => url);
+    this.revoke_active_object_urls();
+    this.animation_controller.reset();
+
+    if (!this.model)
+    {
+      return;
+    }
+
+    this.clear_selection();
+    this.remove_normal_helpers();
+    this.remove_tangent_helpers();
+    this.normal_helpers = [];
+    this.tangent_helpers = [];
+
+    const disposed_textures = new Set();
+
+    this.model.traverse(child =>
+    {
+      if (child.geometry)
+      {
+        child.geometry.dispose();
+      }
+
+      if (child.material)
+      {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach(material =>
+        {
+          Object.values(material).forEach(value =>
+          {
+            if (value && value.isTexture && !disposed_textures.has(value))
+            {
+              disposed_textures.add(value);
+              value.dispose();
+            }
+          });
+
+          material.dispose();
+        });
+      }
+    });
+
+    this.model.removeFromParent();
+    this.model = null;
+    this.gltf = null;
+  }
+
+  create_object_url(blob)
+  {
+    const object_url = URL.createObjectURL(blob);
+    this.active_object_urls.push(object_url);
+    return object_url;
+  }
+
+  revoke_active_object_urls()
+  {
+    this.active_object_urls.forEach(object_url =>
+    {
+      URL.revokeObjectURL(object_url);
+    });
+    this.active_object_urls = [];
+  }
+
+  resolve_resource_url(url, resource_urls)
+  {
+    const normalized_url = this.normalize_resource_key(url);
+    const decoded_url = this.normalize_resource_key(decodeURIComponent(url));
+
+    return resource_urls.get(normalized_url) ||
+      resource_urls.get(decoded_url) ||
+      resource_urls.get(this.get_basename(normalized_url)) ||
+      resource_urls.get(this.get_basename(decoded_url)) ||
+      url;
+  }
+
+  normalize_resource_key(url)
+  {
+    return url
+      .split('?')[0]
+      .split('#')[0]
+      .replace(/\\/g, '/')
+      .replace(/^(\.\/)+/, '');
+  }
+
+  get_basename(url)
+  {
+    const normalized_url = this.normalize_resource_key(url);
+    const parts = normalized_url.split('/');
+    return parts[parts.length - 1];
+  }
+
   update()
   {
     this.controls.update();
@@ -255,7 +410,7 @@ class SceneController
       this.elapsed_time_at_button_pressed = Date.now();
     }
 
-    if (this.input.left_mouse_button_released)
+    if (this.model && this.input.left_mouse_button_released)
     {
       if (Date.now() - this.elapsed_time_at_button_pressed < 200)
       {
@@ -488,6 +643,11 @@ class SceneController
 
   toggle_wireframe(active)
   {
+    if (!this.model)
+    {
+      return;
+    }
+
     this.model.traverse(child =>
     {
       if (child.isMesh)
@@ -499,6 +659,11 @@ class SceneController
 
   toggle_double_sided(active)
   {
+    if (!this.model)
+    {
+      return;
+    }
+
     this.model.traverse(child =>
     {
       if (child.isMesh)
@@ -528,10 +693,16 @@ class SceneController
     {
       this.scene.remove(this.normal_helpers[i]);
     }
+    this.normal_helpers = [];
   }
 
   populate_normal_helpers()
   {
+    if (!this.model)
+    {
+      return;
+    }
+
     this.model.traverse(child =>
     {
       if (child.isMesh)
@@ -563,6 +734,11 @@ class SceneController
 
   populate_tangent_helpers()
   {
+    if (!this.model)
+    {
+      return;
+    }
+
     this.model.traverse(child =>
     {
       if (child.isMesh)
