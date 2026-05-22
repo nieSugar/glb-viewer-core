@@ -6,10 +6,13 @@ import vitePugPlugin from 'vite-plugin-pug-transformer';
 import packagejson from './package.json';
 
 const useHttps = process.env.VITE_USE_HTTPS === 'true';
+const siteBasePath = process.env.VITE_BASE_PATH ?? '/';
+const normalizedSiteBasePath = siteBasePath.endsWith('/') ? siteBasePath : `${siteBasePath}/`;
+const basePath = `${normalizedSiteBasePath}webview/`;
 
 export default defineConfig({
   root: 'src',
-  base: '/webview/',
+  base: basePath,
   publicDir: '../public/',
   plugins: [
     glsl(),
