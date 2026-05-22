@@ -75,16 +75,16 @@ class TextureItem
       const mesh_elem = document.createElement('div');
 
       mesh_elem.classList.add('textures-table__mesh-name');
-      mesh_elem.textContent = material.mesh_name || 'Unknown Mesh';
-      mesh_elem.title = material.mesh_name || 'Unknown Mesh';
+      mesh_elem.textContent = material.mesh_name || this.parent.t('unknownMesh');
+      mesh_elem.title = material.mesh_name || this.parent.t('unknownMesh');
 
       material_elem.classList.add('textures-table__material-name');
-      material_elem.textContent = material.material_name || 'Unknown Material';
-      material_elem.title = material.material_name || 'Unknown Material';
+      material_elem.textContent = material.material_name || this.parent.t('unknownMaterial');
+      material_elem.title = material.material_name || this.parent.t('unknownMaterial');
 
       type_elem.classList.add('textures-table__type-name');
-      type_elem.textContent = material.channel || 'Unknown';
-      type_elem.title = material.channel || 'Unknown';
+      type_elem.textContent = material.channel || this.parent.t('unknownType');
+      type_elem.title = material.channel || this.parent.t('unknownType');
 
       this.mesh_elements.push(mesh_elem);
       this.material_elements.push(material_elem);
@@ -101,7 +101,7 @@ class TextureItem
     {
       this.columns.toggle.innerHTML = '';
     }
-    this.columns.toggle.title = 'Expand';
+    this.columns.toggle.title = this.parent.t('expand');
 
     this.columns.download.innerHTML = this.DOWNLOAD_ICON;
     this.columns.download.classList.add('textures__icon');
@@ -125,7 +125,7 @@ class TextureItem
   {
     if (this.mesh_elements.length > 1)
     {
-      this.collapsed_meshes.textContent = `[${this.mesh_elements.length} meshes]`;
+      this.collapsed_meshes.textContent = `[${this.parent.t('meshCount', { count: this.mesh_elements.length })}]`;
     }
     else
     {
@@ -142,7 +142,7 @@ class TextureItem
     if (this.type_elements.length > 1 && !this.all_channels_same())
     {
       const set = new Set(this.type_elements.map(el => el.textContent));
-      this.collapsed_types.textContent = `[${set.size} types]`;
+      this.collapsed_types.textContent = `[${this.parent.t('typeCount', { count: set.size })}]`;
     }
     else
     {
@@ -152,7 +152,7 @@ class TextureItem
     if (this.material_elements.length > 1 && !this.all_material_names_same())
     {
       const set = new Set(this.material_elements.map(el => el.textContent));
-      this.collapsed_materials.textContent = `[${set.size} materials]`;
+      this.collapsed_materials.textContent = `[${this.parent.t('materialCount', { count: set.size })}]`;
     }
     else
     {
@@ -210,7 +210,7 @@ class TextureItem
     this.expanded = !this.expanded;
     if (this.expanded)
     {
-      this.columns.toggle.title = 'Collapse';
+      this.columns.toggle.title = this.parent.t('collapse');
       this.columns.toggle.innerHTML = this.CLOSE_ICON;
 
       this.expanded_meshes.classList.remove('hidden');
@@ -223,7 +223,7 @@ class TextureItem
     }
     else
     {
-      this.columns.toggle.title = 'Expand';
+      this.columns.toggle.title = this.parent.t('expand');
       this.columns.toggle.innerHTML = this.OPEN_ICON;
 
       this.expanded_materials.classList.add('hidden');

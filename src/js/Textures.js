@@ -30,6 +30,11 @@ class Textures extends ResizableWindow
     this.texture_table = container.querySelector('.textures-table');
   }
 
+  t(key, values = {})
+  {
+    return this.panel.ui_controller.t(key, values);
+  }
+
   init(scene_controller)
   {
     this.scene_controller = scene_controller;
@@ -91,7 +96,7 @@ class Textures extends ResizableWindow
               if (!texture_map.has(tex.source.uuid))
               {
                 texture_map.set(tex.source.uuid, {
-                  name: tex.name || 'No name',
+                  name: tex.name || this.t('unknownName'),
                   uuid: tex.source.uuid,
                   image: tex.image || tex.source || undefined,
                   instance: tex,
@@ -102,9 +107,9 @@ class Textures extends ResizableWindow
               const entry = texture_map.get(tex.source.uuid);
 
               entry.used_in.push({
-                material_name: material.name || 'Unknown Material',
+                material_name: material.name || this.t('unknownMaterial'),
                 channel: channel,
-                mesh_name: child.name || 'Unnamed Mesh'
+                mesh_name: child.name || this.t('unnamedMesh')
               });
             }
           }
@@ -175,7 +180,7 @@ class Textures extends ResizableWindow
     }
     else
     {
-      this.$rows_container.innerHTML = '<div class="texture-node">No textures found</div>';
+      this.$rows_container.innerHTML = `<div class="texture-node">${this.t('noTexturesFound')}</div>`;
     }
   }
 

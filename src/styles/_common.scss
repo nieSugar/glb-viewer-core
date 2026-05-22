@@ -31,6 +31,45 @@ body, html {
   height: 100%;
 }
 
+.core-language-switch {
+  display: flex;
+
+  column-gap: 8 * $ptr;
+
+  align-items: center;
+
+  position: absolute;
+  top: 10 * $ptr;
+  right: 10 * $ptr;
+  z-index: 20;
+
+  padding: 6 * $ptr 10 * $ptr;
+
+  color: var(--text-color);
+
+  background: rgb(0 0 0 / 55%);
+
+  border: 1 * $ptr solid rgb(255 255 255 / 20%);
+  border-radius: $border-radius;
+}
+
+.core-language-switch__label {
+  font-size: 11 * $ptr;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.core-language-switch__select {
+  padding: 3 * $ptr 6 * $ptr;
+
+  color: var(--text-color);
+
+  background-color: var(--background-color);
+
+  border: 1 * $ptr solid var(--text-color);
+  border-radius: 4 * $ptr;
+}
+
 div.hidden {
   display: none;
 }

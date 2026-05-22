@@ -50,7 +50,7 @@ class Geometries extends ResizableWindow
     this.extract_geometries_list(object3d);
     this.build_geometries_list();
 
-    this.$header_title.textContent = `Geometries (${this.get_geometries_count()})`;
+    this.$header_title.textContent = `${this.panel.ui_controller.t('geometriesTitle')} (${this.get_geometries_count()})`;
   }
 
   extract_geometries_list(object3d)
@@ -85,7 +85,7 @@ class Geometries extends ResizableWindow
 
     if (this.geometry_items.length < 1)
     {
-      this.$rows_container.innerHTML = '<div class="geometries-empty">No geometries found</div>';
+      this.$rows_container.innerHTML = `<div class="geometries-empty">${this.panel.ui_controller.t('noGeometriesFound')}</div>`;
       return;
     }
 

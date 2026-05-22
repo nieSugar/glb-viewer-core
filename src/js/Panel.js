@@ -188,6 +188,14 @@ class Panel
 
     return find_available_position(startTop, startLeft);
   }
+
+  refresh_localized_labels()
+  {
+    if (this.scene_controller?.model)
+    {
+      this.update_contents(this.scene_controller.model);
+    }
+  }
 }
 
 export { Panel };

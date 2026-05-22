@@ -34,7 +34,7 @@ class MaterialItem
     this.columns.type.classList.add('materials-row__type');
     this.columns.meshes.classList.add('materials-row__meshes');
     this.columns.more.classList.add('materials__icon');
-    this.columns.more.title = 'Open details';
+    this.columns.more.title = this.parent.panel.ui_controller.t('openDetails');
 
     this.columns.meshes.appendChild(this.$collapsed_meshes);
     this.columns.meshes.appendChild(this.$expanded_meshes);
@@ -51,7 +51,7 @@ class MaterialItem
   init()
   {
     this.columns.name.textContent = this.material.name || `Material ${this.material.uuid}`;
-    this.columns.name.title = 'Click for more details';
+    this.columns.name.title = this.parent.panel.ui_controller.t('openDetailsHint');
     this.columns.type.textContent = this.material.type;
 
     this.columns.name.addEventListener('click', this.handle_more_button_click.bind(this));
@@ -62,7 +62,7 @@ class MaterialItem
     if (this.meshes.length > 1)
     {
       this.columns.toggle.innerHTML = this.OPEN_ICON;
-      this.columns.toggle.title = 'Expand';
+      this.columns.toggle.title = this.parent.panel.ui_controller.t('expand');
       this.columns.toggle.addEventListener('click', this.handle_expand_button_click.bind(this));
     }
     else
@@ -85,7 +85,7 @@ class MaterialItem
     this.$collapsed_meshes.innerHTML = '';
     if (this.meshes.length > 1)
     {
-      this.$collapsed_meshes.textContent = `[${this.meshes.length} meshes]`;
+      this.$collapsed_meshes.textContent = `[${this.parent.panel.ui_controller.t('meshCount', { count: this.meshes.length })}]`;
     }
     else
     {
@@ -133,12 +133,12 @@ class MaterialItem
     if (this.expanded)
     {
       this.columns.toggle.innerHTML = this.CLOSE_ICON;
-      this.columns.toggle.title = 'Collapse';
+      this.columns.toggle.title = this.parent.panel.ui_controller.t('collapse');
     }
     else
     {
       this.columns.toggle.innerHTML = this.OPEN_ICON;
-      this.columns.toggle.title = 'Expand';
+      this.columns.toggle.title = this.parent.panel.ui_controller.t('expand');
     }
   }
 

@@ -7,7 +7,7 @@ class StartApp
     try
     {
       const env_variables = this.get_env_variables(env_variables_string);
-      const vite_command = use_ssl ? 'yarn start-vite-ssl' : 'yarn start-vite';
+      const vite_command = use_ssl ? 'pnpm run start-vite-ssl' : 'pnpm run start-vite';
 
       Object.assign(env_variables, process.env);
 

@@ -115,7 +115,7 @@ class Details extends ResizableWindow
     {
       const key = relevant_keys[i];
 
-      let value = obj[key] || 'undefined';
+      let value = obj[key] ?? 'undefined';
       if (value && typeof value === 'object')
       {
         switch (true)
@@ -232,11 +232,13 @@ class Details extends ResizableWindow
     this.ui_controller.open_material_details(material, true);
   }
 
-  copy_to_clipboard(text)
+  async copy_to_clipboard(text)
   {
-    navigator.clipboard.writeText(text);
+    const copied = await this.try_copy_to_clipboard(String(text));
 
-    this.$header_message.textContent = 'Copied to clipboard';
+    this.$header_message.textContent = copied
+      ? this.ui_controller.t('copiedToClipboard')
+      : this.ui_controller.t('copyFailed');
     this.$header_title.classList.add('hidden');
     this.$header_message.classList.remove('faded');
 
@@ -245,6 +247,63 @@ class Details extends ResizableWindow
       this.$header_message.classList.add('faded');
       this.$header_title.classList.remove('hidden');
     }, 1000);
+  }
+
+  async try_copy_to_clipboard(text)
+  {
+    try
+    {
+      if (navigator.clipboard && window.isSecureContext)
+      {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    }
+    catch (error)
+    {
+      console.warn('Clipboard API failed, falling back to execCommand:', error);
+    }
+
+    return this.copy_to_clipboard_fallback(text);
+  }
+
+  copy_to_clipboard_fallback(text)
+  {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+
+    document.body.appendChild(textarea);
+
+    const selection = document.getSelection();
+    const original_range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    textarea.focus();
+    textarea.select();
+
+    let success = false;
+    try
+    {
+      success = document.execCommand('copy');
+    }
+    catch (error)
+    {
+      console.warn('execCommand copy fallback failed:', error);
+      success = false;
+    }
+
+    document.body.removeChild(textarea);
+
+    if (selection && original_range)
+    {
+      selection.removeAllRanges();
+      selection.addRange(original_range);
+    }
+
+    return success;
   }
 
   prettify_name(name)

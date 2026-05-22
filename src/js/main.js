@@ -58,6 +58,9 @@ class MainApplication
       case 'setWebViewPath':
         this.scene_controller.setLibURIs(message.webview_path);
         break;
+      case 'updateLanguage':
+        this.ui_controller.set_language(message.language);
+        break;
       }
     });
 
@@ -71,4 +74,9 @@ document.addEventListener('DOMContentLoaded', () =>
 
   const main_application = new MainApplication();
   main_application.init();
+
+  window.__glbViewerSetLanguage = (language) =>
+  {
+    main_application.ui_controller.set_language(language);
+  };
 });

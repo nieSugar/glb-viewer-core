@@ -46,7 +46,7 @@ class GeometryItem
     this.columns.meshes.classList.add('geometries__meshes');
     this.columns.attributes.classList.add('geometries__attributes');
     this.columns.copy.classList.add('geometries__icon');
-    this.columns.copy.title = 'Open details JSON in new tab';
+    this.columns.copy.title = this.parent.panel.ui_controller.t('openJsonInNewTab');
 
     this.columns.meshes.appendChild(this.$collapsed_meshes);
     this.columns.meshes.appendChild(this.$expanded_meshes);
@@ -104,7 +104,7 @@ class GeometryItem
     if (this.meshes.length > 1 || this.attribute_elements.length > 0)
     {
       this.columns.toggle.innerHTML = this.OPEN_ICON;
-      this.columns.toggle.title = 'Expand';
+      this.columns.toggle.title = this.parent.panel.ui_controller.t('expand');
       this.columns.toggle.addEventListener('click', this.handle_expand_button_click.bind(this));
     }
     else
@@ -127,7 +127,7 @@ class GeometryItem
   {
     if (this.mesh_elements.length > 1)
     {
-      this.$collapsed_meshes.textContent = `[${this.mesh_elements.length} meshes]`;
+      this.$collapsed_meshes.textContent = `[${this.parent.panel.ui_controller.t('meshCount', { count: this.mesh_elements.length })}]`;
     }
     else
     {
@@ -149,7 +149,7 @@ class GeometryItem
     }
     else
     {
-      this.$collapsed_attributes.textContent = '[No attributes]';
+      this.$collapsed_attributes.textContent = `[${this.parent.panel.ui_controller.t('noAttributes')}]`;
     }
   }
 
@@ -181,7 +181,7 @@ class GeometryItem
         this.attribute_elements.map(element => element.textContent).join('\n')
       );
       const prev_content = this.$expanded_attributes.innerHTML;
-      this.$expanded_attributes.innerHTML = 'Copied to clipboard';
+      this.$expanded_attributes.innerHTML = this.parent.panel.ui_controller.t('copiedToClipboard');
 
       setTimeout(() =>
       {
@@ -215,7 +215,7 @@ class GeometryItem
     if (this.expanded)
     {
       this.columns.toggle.innerHTML = this.CLOSE_ICON;
-      this.columns.toggle.title = 'Collapse';
+      this.columns.toggle.title = this.parent.panel.ui_controller.t('collapse');
 
       this.$collapsed_meshes.classList.add('hidden');
       this.$expanded_meshes.classList.remove('hidden');
@@ -225,7 +225,7 @@ class GeometryItem
     else
     {
       this.columns.toggle.innerHTML = this.OPEN_ICON;
-      this.columns.toggle.title = 'Expand';
+      this.columns.toggle.title = this.parent.panel.ui_controller.t('expand');
 
       this.$expanded_meshes.classList.add('hidden');
       this.$collapsed_meshes.classList.remove('hidden');

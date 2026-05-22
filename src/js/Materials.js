@@ -53,7 +53,7 @@ class Materials extends ResizableWindow
     this.extract_material_list(object3d);
     this.build_materials_list();
 
-    this.$header_title.textContent = `Materials (${this.get_material_count()})`;
+    this.$header_title.textContent = `${this.panel.ui_controller.t('materialsTitle')} (${this.get_material_count()})`;
   }
 
   extract_material_list(object3d)
@@ -100,7 +100,7 @@ class Materials extends ResizableWindow
 
     if (this.material_items.length < 1)
     {
-      this.$rows_container.innerHTML = '<div class="materials-empty">No materials found</div>';
+      this.$rows_container.innerHTML = `<div class="materials-empty">${this.panel.ui_controller.t('noMaterialsFound')}</div>`;
       return;
     }
 

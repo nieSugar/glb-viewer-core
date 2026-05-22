@@ -1,4 +1,5 @@
 import { Details } from './Details';
+import { I18n } from './I18n';
 import { Panel } from './Panel';
 import { Settings } from './Settings';
 
@@ -6,6 +7,8 @@ class UIController
 {
   constructor()
   {
+    this.i18n = new I18n();
+
     this.details = new Details(this);
     this.panel = new Panel(this);
     this.settings = new Settings(this);
@@ -18,6 +21,38 @@ class UIController
     this.details.init();
     this.panel.init(this.scene_controller, this.details);
     this.settings.init(this.scene_controller);
+
+    const language_select = document.querySelector('.core-language-switch__select');
+    if (language_select)
+    {
+      language_select.value = this.i18n.current_language;
+    }
+
+    this.i18n.apply_to_dom(document);
+    this.panel.refresh_localized_labels();
+  }
+
+  t(key, values = {})
+  {
+    return this.i18n.t(key, values);
+  }
+
+  set_language(language)
+  {
+    this.i18n.set_language(language);
+
+    const language_select = document.querySelector('.core-language-switch__select');
+    if (language_select && language_select.value !== this.i18n.current_language)
+    {
+      language_select.value = this.i18n.current_language;
+    }
+
+    this.panel.refresh_localized_labels();
+  }
+
+  get_current_language()
+  {
+    return this.i18n.current_language;
   }
 
   update()
