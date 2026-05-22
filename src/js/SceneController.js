@@ -157,7 +157,9 @@ class SceneController
     this.draco_loader.setDecoderPath(`${webview_path}/lib/draco/`);
     this.ktx2_loader.setTranscoderPath(`${webview_path}/lib/basis/`);
 
-    this.ktx2_loader.detectSupport(this.renderer.renderer);
+    // detectSupport returns a Promise; resolution must happen before any KTX2
+    // texture is decoded. Track it so loadModel* can await it if needed.
+    this._ktx2_ready = this.ktx2_loader.detectSupport(this.renderer.renderer);
 
     this.loader.setDRACOLoader(this.draco_loader);
     this.loader.setKTX2Loader(this.ktx2_loader);
@@ -185,10 +187,13 @@ class SceneController
     const mime_type = extension === 'gltf' ? 'model/gltf+json' : 'model/gltf-binary';
     const object_url = this.create_object_url(new Blob([arrayBuffer], { type: mime_type }));
 
-    this.loader.load(object_url, (gltf) =>
+    this._await_loaders_ready().then(() =>
     {
-      this.on_model_loaded(gltf);
-    }, undefined, console.error);
+      this.loader.load(object_url, (gltf) =>
+      {
+        this.on_model_loaded(gltf);
+      }, undefined, console.error);
+    });
   }
 
   loadModelFromFiles(files, entryFileName, fileSize)
@@ -223,14 +228,17 @@ class SceneController
 
     this.loader.manager.setURLModifier(url => this.resolve_resource_url(url, resource_urls));
 
-    this.loader.load(entry_file_url, (gltf) =>
+    this._await_loaders_ready().then(() =>
     {
-      this.loader.manager.setURLModifier(url => url);
-      this.on_model_loaded(gltf);
-    }, undefined, (error) =>
-    {
-      this.loader.manager.setURLModifier(url => url);
-      console.error(error);
+      this.loader.load(entry_file_url, (gltf) =>
+      {
+        this.loader.manager.setURLModifier(url => url);
+        this.on_model_loaded(gltf);
+      }, undefined, (error) =>
+      {
+        this.loader.manager.setURLModifier(url => url);
+        console.error(error);
+      });
     });
   }
 
@@ -245,10 +253,18 @@ class SceneController
 
     this.prepare_for_new_model();
     this.file_size = fileSize || 0;
-    this.loader.load(dataUri, (gltf) =>
+    this._await_loaders_ready().then(() =>
     {
-      this.on_model_loaded(gltf);
-    }, undefined, console.error);
+      this.loader.load(dataUri, (gltf) =>
+      {
+        this.on_model_loaded(gltf);
+      }, undefined, console.error);
+    });
+  }
+
+  _await_loaders_ready()
+  {
+    return this._ktx2_ready ? Promise.resolve(this._ktx2_ready).catch(() => {}) : Promise.resolve();
   }
 
   on_model_loaded(gltf)

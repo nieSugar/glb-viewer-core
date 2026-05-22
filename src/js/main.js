@@ -33,6 +33,8 @@ class MainApplication
     this.ui_controller.init(this.scene_controller);
     this.scene_controller.init(this.ui_controller);
 
+    this._chunked_transfers = new Map();
+
     // Listen for messages from the extension
     window.addEventListener('message', event =>
     {
@@ -55,6 +57,38 @@ class MainApplication
         this.ui_controller.panel.contents.info.update_extension(message.extension);
         this.scene_controller.loadModelFromBase64(message.data, message.extension, message.fileSize);
         break;
+      case 'modelChunkStart':
+        this._chunked_transfers.set(message.transferId, {
+          extension: message.extension,
+          fileSize: message.fileSize,
+          totalChunks: message.totalChunks,
+          received: 0,
+          chunks: new Array(message.totalChunks)
+        });
+        break;
+      case 'modelChunk':
+      {
+        const transfer = this._chunked_transfers.get(message.transferId);
+        if (!transfer) break;
+        // message.data is a Uint8Array (structured-cloned). Store as-is.
+        transfer.chunks[message.index] = message.data;
+        transfer.received += 1;
+        if (transfer.received === transfer.totalChunks)
+        {
+          this._chunked_transfers.delete(message.transferId);
+          const total_bytes = transfer.chunks.reduce((sum, c) => sum + c.byteLength, 0);
+          const merged = new Uint8Array(total_bytes);
+          let offset = 0;
+          for (let i = 0; i < transfer.chunks.length; i++)
+          {
+            merged.set(transfer.chunks[i], offset);
+            offset += transfer.chunks[i].byteLength;
+          }
+          this.ui_controller.panel.contents.info.update_extension(transfer.extension);
+          this.scene_controller.loadModelFromBinary(merged.buffer, transfer.extension || 'glb', transfer.fileSize);
+        }
+        break;
+      }
       case 'setWebViewPath':
         this.scene_controller.setLibURIs(message.webview_path);
         break;

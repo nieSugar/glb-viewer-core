@@ -126,7 +126,8 @@ class I18n
       return stored;
     }
 
-    return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    // Default to Chinese unless the user explicitly switches via the UI.
+    return 'zh';
   }
 
   t(key, values = {})

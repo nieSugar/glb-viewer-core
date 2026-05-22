@@ -26,6 +26,10 @@ class UIController
     if (language_select)
     {
       language_select.value = this.i18n.current_language;
+      language_select.addEventListener('change', (event) =>
+      {
+        this.set_language(event.target.value);
+      });
     }
 
     this.i18n.apply_to_dom(document);

@@ -1,7 +1,7 @@
 .container
 	.core-language-switch
 		label.core-language-switch__label(for='coreLanguageSelect' data-i18n='languageLabel') Language
-		select#coreLanguageSelect.core-language-switch__select(onchange='window.__glbViewerSetLanguage(event.target.value)')
+		select#coreLanguageSelect.core-language-switch__select
 			option(value='en') English
 			option(value='zh') 中文
 	include ./panel.pug
