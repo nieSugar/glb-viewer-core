@@ -1,4 +1,4 @@
-import { FloatType, LinearSRGBColorSpace, Mesh, MeshBasicMaterial, NearestFilter, OrthographicCamera, PlaneGeometry, Scene, SRGBColorSpace, WebGLRenderTarget } from 'three';
+import { LinearSRGBColorSpace, Mesh, MeshBasicMaterial, NearestFilter, OrthographicCamera, PlaneGeometry, Scene, SRGBColorSpace, UnsignedByteType, WebGLRenderTarget } from 'three';
 import { ResizableWindow } from './ResizeableWindow';
 import { TextureItem } from './TextureItem';
 import { TexturePreview } from './TexturePreview';
@@ -190,40 +190,40 @@ class Textures extends ResizableWindow
     if (texture.source && texture.source.data)
     {
       const data = texture.source.data;
+      const is_image_bitmap = typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap;
       // Check if it's already a valid drawable type
-      if (data instanceof ImageBitmap ||
+      if (is_image_bitmap ||
           data instanceof HTMLImageElement ||
           data instanceof HTMLCanvasElement ||
           data instanceof HTMLVideoElement ||
           data instanceof OffscreenCanvas)
       {
-        // If it's already an ImageBitmap and full_size is requested or size matches, return it
-        if (data instanceof ImageBitmap)
+        const width = data.width;
+        const height = data.height;
+
+        if (full_size || (width <= 512 && height <= 512))
         {
-          if (full_size || (data.width <= 512 && data.height <= 512))
-          {
-            return data;
-          }
+          return is_image_bitmap ? data : await createImageBitmap(data);
         }
-        else if (full_size)
-        {
-          // For other image types, convert to ImageBitmap if full_size
-          return await createImageBitmap(data);
-        }
-        else if (data.width <= 512 && data.height <= 512)
-        {
-          // If size is already small enough, convert to ImageBitmap
-          return await createImageBitmap(data);
-        }
+
+        const scale = 512 / Math.max(width, height);
+        return await createImageBitmap(data, {
+          resizeWidth: Math.max(1, Math.round(width * scale)),
+          resizeHeight: Math.max(1, Math.round(height * scale)),
+          resizeQuality: 'high'
+        });
       }
     }
 
-    const width = full_size ? texture.image.width : Math.min(texture.image.width || 512, 512);
-    const height = full_size ? texture.image.height : Math.min(texture.image.height || 512, 512);
+    const source_width = texture.image.width || 512;
+    const source_height = texture.image.height || 512;
+    const scale = full_size ? 1 : Math.min(1, 512 / Math.max(source_width, source_height));
+    const width = Math.max(1, Math.round(source_width * scale));
+    const height = Math.max(1, Math.round(source_height * scale));
     const rt = new WebGLRenderTarget(width, height, {
-      type: FloatType
+      type: UnsignedByteType,
+      colorSpace: LinearSRGBColorSpace
     });
-    rt.colorSpace = LinearSRGBColorSpace;
     const quadScene = new Scene();
     const quadCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -231,19 +231,32 @@ class Textures extends ResizableWindow
     const quad = new Mesh(new PlaneGeometry(2, 2), material);
     quadScene.add(quad);
 
-    this.scene_controller.renderer.renderer.outputColorSpace = LinearSRGBColorSpace;
-    this.scene_controller.renderer.renderer.setRenderTarget(rt);
-    this.scene_controller.renderer.renderer.render(quadScene, quadCamera);
-    this.scene_controller.renderer.renderer.setRenderTarget(null);
-    this.scene_controller.renderer.renderer.outputColorSpace = SRGBColorSpace;
+    const renderer = this.scene_controller.renderer.renderer;
+    const previous_output_color_space = renderer.outputColorSpace;
+    const buffer = new Uint8Array(width * height * 4);
+    try
+    {
+      renderer.outputColorSpace = LinearSRGBColorSpace;
+      renderer.setRenderTarget(rt);
+      renderer.render(quadScene, quadCamera);
+      renderer.setRenderTarget(null);
+      renderer.outputColorSpace = previous_output_color_space;
+      renderer.readRenderTargetPixels(rt, 0, 0, width, height, buffer);
+    }
+    finally
+    {
+      renderer.setRenderTarget(null);
+      renderer.outputColorSpace = previous_output_color_space;
+      rt.dispose();
+      material.dispose();
+      quad.geometry.dispose();
+    }
 
-    const buffer = new Float32Array(width * height * 4);
-    this.scene_controller.renderer.renderer.readRenderTargetPixels(rt, 0, 0, width, height, buffer);
-    if (texture.colorSpace === 'srgb')
+    if (texture.colorSpace === SRGBColorSpace)
     {
       this.convert_pixel_buffer_to_srgb(buffer);
     }
-    const pixel_buffer = this.convert_to_uint8_array(buffer);
+    const pixel_buffer = new Uint8ClampedArray(buffer);
     const imageData = new ImageData(pixel_buffer, width, height);
 
     const imageBitmap = await createImageBitmap(imageData);
@@ -268,32 +281,14 @@ class Textures extends ResizableWindow
   {
     for (let i = 0; i < buffer.length; i += 4)
     {
-      const r = buffer[i + 0];
-      const g = buffer[i + 1];
-      const b = buffer[i + 2];
+      const r = buffer[i + 0] / 255;
+      const g = buffer[i + 1] / 255;
+      const b = buffer[i + 2] / 255;
 
-      buffer[i + 0] = this.linearToSrgb(r);
-      buffer[i + 1] = this.linearToSrgb(g);
-      buffer[i + 2] = this.linearToSrgb(b);
+      buffer[i + 0] = Math.round(this.linearToSrgb(r) * 255);
+      buffer[i + 1] = Math.round(this.linearToSrgb(g) * 255);
+      buffer[i + 2] = Math.round(this.linearToSrgb(b) * 255);
     }
-  }
-
-  convert_to_uint8_array(buffer)
-  {
-    const pixel_buffer = new Uint8ClampedArray(buffer.length);
-    for (let i = 0; i < buffer.length; i += 4)
-    {
-      const r = buffer[i + 0];
-      const g = buffer[i + 1];
-      const b = buffer[i + 2];
-      const a = buffer[i + 3];
-
-      pixel_buffer[i + 0] = Math.round(r * 255);
-      pixel_buffer[i + 1] = Math.round(g * 255);
-      pixel_buffer[i + 2] = Math.round(b * 255);
-      pixel_buffer[i + 3] = Math.round(a * 255);
-    }
-    return pixel_buffer;
   }
 
   image_bitmap_to_data_url(image_bitmap)
