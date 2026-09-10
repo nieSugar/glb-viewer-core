@@ -1,3 +1,4 @@
+import { Box3, Vector3 } from 'three';
 import { ResizableWindow } from './ResizeableWindow';
 
 class Details extends ResizableWindow
@@ -8,7 +9,7 @@ class Details extends ResizableWindow
     const $content = document.querySelector('.details__content');
     const $headers = document.querySelector('.details__header');
 
-    super($container, $headers, $content);
+    super($container, $headers, document.querySelector('.details__content-wrapper'));
 
     this.$content = $content;
     this.$header = $headers;
@@ -40,6 +41,12 @@ class Details extends ResizableWindow
     this.prettify_property_labels = null;
 
     this.current_object = null;
+    this.is_editing = false;
+    this.editors = [];
+    this.$edit = document.querySelector('.details__edit');
+    this.$apply = document.querySelector('.details__apply');
+    this.$cancel = document.querySelector('.details__cancel');
+    this.$error = document.querySelector('.details__error');
 
     this.$header_message = document.querySelector('.details__header-message');
     this.$header_title = document.querySelector('.details__header-title');
@@ -73,22 +80,56 @@ class Details extends ResizableWindow
     this.$open_settings.addEventListener('click', this.toggle_settings.bind(this));
     this.$close_settings.addEventListener('click', this.toggle_settings.bind(this));
     this.$settings_close_button.addEventListener('click', this.toggle_settings.bind(this));
+    this.$edit.addEventListener('click', () =>
+    {
+      this.ui_controller.panel.contents.animations.stop_all();
+      this.is_editing = true;
+      this.show_object_details();
+      this.$content.querySelector('input, textarea')?.focus();
+    });
+    this.$cancel.addEventListener('click', () =>
+    {
+      this.is_editing = false;
+      this.show_object_details();
+    });
+    this.$content.addEventListener('submit', (event) =>
+    {
+      event.preventDefault();
+      this.apply_edits();
+    });
   }
 
   reset_details()
   {
+    if (!this.can_leave_editor()) return;
+    this.is_editing = false;
+    this.current_object = null;
+    this.editors = [];
     this.$content.innerHTML = '';
     this.$container.classList.add('hidden');
   }
 
-  handle_object_click(obj3d)
+  handle_object_click(obj3d, instance_id)
   {
+    if (!this.can_leave_editor()) return false;
+    this.is_editing = false;
     this.current_object = obj3d;
+    this.current_instance_id = instance_id;
     this.show_object_details();
+    return true;
   }
 
   show_object_details()
   {
+    if (!this.current_object) return;
+    const box = new Box3().setFromObject(this.current_object);
+    this.current_object.globalPosition = box.getCenter(new Vector3());
+    this.current_object.globalScale = box.getSize(new Vector3());
+    this.editors = [];
+    this.$error.textContent = '';
+    this.$edit.classList.toggle('hidden', this.is_editing);
+    this.$apply.classList.toggle('hidden', !this.is_editing);
+    this.$cancel.classList.toggle('hidden', !this.is_editing);
     this.$content.innerHTML = '';
     const details = this.create_detail_item(this.current_object);
     for (let i = 0; i < details.length; i++)
@@ -156,6 +197,12 @@ class Details extends ResizableWindow
       $item_label.title = key;
       $item_content.textContent = value;
 
+      if (this.is_editing && this.create_editor(obj, key, $item_content))
+      {
+        details.push($new_details_item);
+        continue;
+      }
+
       if (key === 'type' && obj.isInstancedMesh)
       {
         const $instanced_item_content = document.createElement('div');
@@ -206,6 +253,128 @@ class Details extends ResizableWindow
     }
 
     return details;
+  }
+
+  create_editor(obj, key, container)
+  {
+    const vector = ['position', 'rotation', 'scale', 'up'].includes(key);
+    const boolean = ['visible', 'castShadow', 'receiveShadow', 'frustumCulled'].includes(key);
+    if (!vector && !boolean && key !== 'name' && key !== 'userData') return false;
+
+    container.textContent = '';
+    container.classList.add('details__editor');
+    const inputs = [];
+    for (const axis of vector ? ['x', 'y', 'z'] : [''])
+    {
+      const input = document.createElement(key === 'userData' ? 'textarea' : 'input');
+      input.setAttribute('aria-label', key + (axis ? ` ${axis.toUpperCase()}` : ''));
+      if (vector)
+      {
+        input.type = 'number';
+        input.step = 'any';
+        input.required = true;
+        input.value = obj[key][axis];
+        const label = document.createElement('label');
+        label.textContent = axis.toUpperCase();
+        label.appendChild(input);
+        container.appendChild(label);
+      }
+      else
+      {
+        if (boolean)
+        {
+          input.type = 'checkbox';
+          input.checked = obj[key];
+        }
+        else
+        {
+          input.value = key === 'userData' ? JSON.stringify(obj[key], null, 2) : obj[key];
+          if (key === 'userData') input.rows = 6;
+        }
+        container.appendChild(input);
+      }
+      inputs.push(input);
+    }
+    if (key === 'rotation')
+    {
+      const unit = document.createElement('span');
+      unit.textContent = 'rad';
+      container.appendChild(unit);
+    }
+    this.editors.push({ key, inputs, vector, boolean, original: inputs.map(input => boolean ? input.checked : input.value) });
+    return true;
+  }
+
+  editor_changed(editor)
+  {
+    return editor.inputs.some((input, index) =>
+      (editor.boolean ? input.checked : input.value) !== editor.original[index]);
+  }
+
+  can_leave_editor()
+  {
+    if (this.is_editing && this.editors.some(editor => this.editor_changed(editor)))
+    {
+      this.$error.textContent = this.ui_controller.t('detailsApplyOrCancel');
+      return false;
+    }
+    return true;
+  }
+
+  read_edits()
+  {
+    const edits = [];
+    for (const editor of this.editors)
+    {
+      const { key, inputs, vector, boolean } = editor;
+      if (!this.editor_changed(editor)) continue;
+      let value = boolean ? inputs[0].checked : inputs[0].value;
+      if (vector)
+      {
+        value = inputs.map(input => input.value.trim() === '' ? NaN : Number(input.value));
+        if (!value.every(Number.isFinite)) throw new Error(this.ui_controller.t('detailsInvalidNumber', { key }));
+      }
+      if (key === 'userData')
+      {
+        try
+        {
+          value = JSON.parse(value);
+          if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
+        }
+        catch
+        {
+          throw new Error(this.ui_controller.t('detailsInvalidJson'));
+        }
+      }
+      edits.push({ key, value, vector });
+    }
+    return edits;
+  }
+
+  apply_edits()
+  {
+    if (!this.is_editing || !this.current_object) return;
+    let edits = [];
+    try
+    {
+      edits = this.read_edits();
+    }
+    catch (error)
+    {
+      this.$error.textContent = error.message;
+      return;
+    }
+    const obj = this.current_object;
+    for (const { key, value, vector } of edits)
+    {
+      if (vector) obj[key].set(...value);
+      else obj[key] = value;
+    }
+    if (edits.some(({ vector }) => vector)) obj.updateMatrix();
+    obj.updateWorldMatrix(true, true);
+    this.ui_controller.handle_object_update(obj, edits, this.current_instance_id);
+    this.is_editing = false;
+    this.show_object_details();
   }
 
   create_material_button(material)
@@ -420,6 +589,7 @@ class Details extends ResizableWindow
 
   toggle_setting($setting_item)
   {
+    if (!this.can_leave_editor()) return;
     if (this.relevant_object_keys.includes($setting_item.dataset.settingKey))
     {
       this.hide_setting($setting_item);

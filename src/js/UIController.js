@@ -66,7 +66,7 @@ class UIController
 
   handle_object_click(object3d, instance_id)
   {
-    this.details.handle_object_click(object3d, instance_id);
+    if (!this.details.handle_object_click(object3d, instance_id)) return;
     this.panel.contents.hierarchy.handle_object_click(object3d, instance_id);
     this.scene_controller.focus_camera_on_object(object3d, true, instance_id);
     if (object3d.material)
@@ -78,6 +78,26 @@ class UIController
   update_panel_contents(object3d)
   {
     this.panel.update_contents(object3d);
+  }
+
+  handle_object_update(object3d, edits, instance_id)
+  {
+    const node = this.panel.contents.hierarchy.find_node_by_object3d(object3d);
+    if (node)
+    {
+      node.$label.textContent = (object3d.name || object3d.type) + (node.total_children_count > 0 ? ` (${node.total_children_count})` : '');
+      node.$action.innerHTML = object3d.visible ? node.icons.ICON_OPEN_EYE : node.icons.ICON_CLOSED_EYE;
+    }
+    if (edits.some(({ key }) => key === 'name'))
+    {
+      this.panel.contents.materials.update_contents(this.scene_controller.model);
+      this.panel.contents.geometries.update_contents(this.scene_controller.model);
+      this.panel.contents.textures.update_contents(this.scene_controller.model);
+    }
+    let visible = true;
+    for (let obj = object3d; obj; obj = obj.parent) visible = visible && obj.visible;
+    if (visible) this.scene_controller.highlight_object(object3d, instance_id);
+    else this.scene_controller.clear_selection();
   }
 
   handle_action_click(action, active)
