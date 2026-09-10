@@ -94,10 +94,7 @@ class UIController
       this.panel.contents.geometries.update_contents(this.scene_controller.model);
       this.panel.contents.textures.update_contents(this.scene_controller.model);
     }
-    let visible = true;
-    for (let obj = object3d; obj; obj = obj.parent) visible = visible && obj.visible;
-    if (visible) this.scene_controller.highlight_object(object3d, instance_id);
-    else this.scene_controller.clear_selection();
+    this.scene_controller.highlight_object(object3d, instance_id);
   }
 
   handle_action_click(action, active)

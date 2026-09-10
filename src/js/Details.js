@@ -37,15 +37,14 @@ class Details extends ResizableWindow
       'globalScale',
       'globalPosition'
     ];
-    this.relevant_object_keys = null;
-    this.prettify_property_labels = null;
+    this.relevant_object_keys = ['name', 'visible', 'type', 'position', 'rotation', 'scale', 'globalScale', 'userData'];
+    this.prettify_property_labels = true;
 
     this.current_object = null;
-    this.is_editing = false;
     this.editors = [];
-    this.$edit = document.querySelector('.details__edit');
-    this.$apply = document.querySelector('.details__apply');
-    this.$cancel = document.querySelector('.details__cancel');
+    this.readonly_items = [];
+    this.last_edit = null;
+    this.$undo = document.querySelector('.details__undo');
     this.$error = document.querySelector('.details__error');
 
     this.$header_message = document.querySelector('.details__header-message');
@@ -80,18 +79,7 @@ class Details extends ResizableWindow
     this.$open_settings.addEventListener('click', this.toggle_settings.bind(this));
     this.$close_settings.addEventListener('click', this.toggle_settings.bind(this));
     this.$settings_close_button.addEventListener('click', this.toggle_settings.bind(this));
-    this.$edit.addEventListener('click', () =>
-    {
-      this.ui_controller.panel.contents.animations.stop_all();
-      this.is_editing = true;
-      this.show_object_details();
-      this.$content.querySelector('input, textarea')?.focus();
-    });
-    this.$cancel.addEventListener('click', () =>
-    {
-      this.is_editing = false;
-      this.show_object_details();
-    });
+    this.$undo.addEventListener('click', this.undo_last_edit.bind(this));
     this.$content.addEventListener('submit', (event) =>
     {
       event.preventDefault();
@@ -99,12 +87,13 @@ class Details extends ResizableWindow
     });
   }
 
-  reset_details()
+  reset_details(force = false)
   {
-    if (!this.can_leave_editor()) return;
-    this.is_editing = false;
+    if (force !== true && !this.can_leave_editor()) return;
     this.current_object = null;
     this.editors = [];
+    this.readonly_items = [];
+    this.last_edit = null;
     this.$content.innerHTML = '';
     this.$container.classList.add('hidden');
   }
@@ -112,7 +101,7 @@ class Details extends ResizableWindow
   handle_object_click(obj3d, instance_id)
   {
     if (!this.can_leave_editor()) return false;
-    this.is_editing = false;
+    this.last_edit = null;
     this.current_object = obj3d;
     this.current_instance_id = instance_id;
     this.show_object_details();
@@ -126,10 +115,9 @@ class Details extends ResizableWindow
     this.current_object.globalPosition = box.getCenter(new Vector3());
     this.current_object.globalScale = box.getSize(new Vector3());
     this.editors = [];
+    this.readonly_items = [];
     this.$error.textContent = '';
-    this.$edit.classList.toggle('hidden', this.is_editing);
-    this.$apply.classList.toggle('hidden', !this.is_editing);
-    this.$cancel.classList.toggle('hidden', !this.is_editing);
+    this.$undo.disabled = !this.last_edit;
     this.$content.innerHTML = '';
     const details = this.create_detail_item(this.current_object);
     for (let i = 0; i < details.length; i++)
@@ -156,30 +144,7 @@ class Details extends ResizableWindow
     {
       const key = relevant_keys[i];
 
-      let value = obj[key] ?? 'undefined';
-      if (value && typeof value === 'object')
-      {
-        switch (true)
-        {
-        case value.isVector3:
-          value = value.x.toFixed(2) + ', ' + value.y.toFixed(2) + ', ' + value.z.toFixed(2);
-          break;
-        case value.isEuler:
-          value = value.x.toFixed(2) + ', ' + value.y.toFixed(2) + ', ' + value.z.toFixed(2);
-          break;
-        default:
-          value = JSON.stringify(value);
-        }
-      }
-
-      if (key === 'type')
-      {
-        if (obj.geometry)
-        {
-          value = this.get_mesh_type(obj);
-          value += ` (${obj.geometry.attributes.position.count} vertices)`;
-        }
-      }
+      const value = this.format_value(obj, key);
 
       const $new_details_item = document.createElement('div');
       $new_details_item.classList.add('details__item');
@@ -197,11 +162,14 @@ class Details extends ResizableWindow
       $item_label.title = key;
       $item_content.textContent = value;
 
-      if (this.is_editing && this.create_editor(obj, key, $item_content))
+      if (this.create_editor(obj, key, $item_content))
       {
+        $new_details_item.classList.add('details__item--editable');
+        if (key === 'visible') $new_details_item.classList.add('details__item--visible');
         details.push($new_details_item);
         continue;
       }
+      this.readonly_items.push({ key, content: $item_content });
 
       if (key === 'type' && obj.isInstancedMesh)
       {
@@ -225,7 +193,7 @@ class Details extends ResizableWindow
       });
       $new_details_item.appendChild($item_copy_icon);
 
-      $new_details_item.onclick = () => this.copy_to_clipboard(value);
+      $new_details_item.onclick = () => this.copy_to_clipboard(this.format_value(obj, key));
       details.push($new_details_item);
     }
 
@@ -253,6 +221,20 @@ class Details extends ResizableWindow
     }
 
     return details;
+  }
+
+  format_value(obj, key)
+  {
+    const value = obj[key] ?? 'undefined';
+    if (key === 'type' && obj.geometry)
+    {
+      return `${this.get_mesh_type(obj)} (${obj.geometry.attributes.position.count} vertices)`;
+    }
+    if (value.isVector3 || value.isEuler)
+    {
+      return ['x', 'y', 'z'].map(axis => value[axis].toFixed(2)).join(', ');
+    }
+    return typeof value === 'object' ? JSON.stringify(value) : String(value);
   }
 
   create_editor(obj, key, container)
@@ -284,6 +266,7 @@ class Details extends ResizableWindow
         if (boolean)
         {
           input.type = 'checkbox';
+          input.setAttribute('role', 'switch');
           input.checked = obj[key];
         }
         else
@@ -301,7 +284,28 @@ class Details extends ResizableWindow
       unit.textContent = 'rad';
       container.appendChild(unit);
     }
-    this.editors.push({ key, inputs, vector, boolean, original: inputs.map(input => boolean ? input.checked : input.value) });
+    const editor = { key, inputs, vector, boolean, error: '', original: inputs.map(input => boolean ? input.checked : input.value) };
+    this.editors.push(editor);
+    for (const input of inputs)
+    {
+      input.addEventListener('change', () => this.apply_edits([editor]));
+      input.addEventListener('keydown', (event) =>
+      {
+        // Keep viewer shortcuts out of text/number editing.
+        event.stopPropagation();
+        if (event.isComposing) return;
+        if (event.key === 'Escape')
+        {
+          event.preventDefault();
+          this.refresh_values([key]);
+        }
+        if (event.key === 'Enter' && (key !== 'userData' || event.ctrlKey || event.metaKey))
+        {
+          event.preventDefault();
+          this.apply_edits([editor]);
+        }
+      });
+    }
     return true;
   }
 
@@ -313,58 +317,79 @@ class Details extends ResizableWindow
 
   can_leave_editor()
   {
-    if (this.is_editing && this.editors.some(editor => this.editor_changed(editor)))
-    {
-      this.$error.textContent = this.ui_controller.t('detailsApplyOrCancel');
-      return false;
-    }
-    return true;
+    return !this.current_object || this.apply_edits();
   }
 
-  read_edits()
+  read_edits(editors = this.editors)
   {
     const edits = [];
-    for (const editor of this.editors)
+    for (const editor of editors)
     {
       const { key, inputs, vector, boolean } = editor;
+      editor.error = '';
       if (!this.editor_changed(editor)) continue;
       let value = boolean ? inputs[0].checked : inputs[0].value;
-      if (vector)
+      try
       {
-        value = inputs.map(input => input.value.trim() === '' ? NaN : Number(input.value));
-        if (!value.every(Number.isFinite)) throw new Error(this.ui_controller.t('detailsInvalidNumber', { key }));
+        if (vector)
+        {
+          value = inputs.map(input => input.value.trim() === '' ? NaN : Number(input.value));
+          if (!value.every(Number.isFinite)) throw new Error(this.ui_controller.t('detailsInvalidNumber', { key }));
+        }
+        if (key === 'userData')
+        {
+          try
+          {
+            value = JSON.parse(value);
+            if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
+          }
+          catch
+          {
+            throw new Error(this.ui_controller.t('detailsInvalidJson'));
+          }
+        }
       }
-      if (key === 'userData')
+      catch (error)
       {
-        try
-        {
-          value = JSON.parse(value);
-          if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
-        }
-        catch
-        {
-          throw new Error(this.ui_controller.t('detailsInvalidJson'));
-        }
+        editor.error = error.message;
+        continue;
       }
       edits.push({ key, value, vector });
     }
+    const invalid = editors.find(editor => editor.error);
+    if (invalid) throw new Error(invalid.error);
     return edits;
   }
 
-  apply_edits()
+  apply_edits(editors = this.editors)
   {
-    if (!this.is_editing || !this.current_object) return;
+    if (!this.current_object) return false;
     let edits = [];
     try
     {
-      edits = this.read_edits();
+      edits = this.read_edits(editors);
     }
-    catch (error)
+    catch
     {
-      this.$error.textContent = error.message;
-      return;
+      this.refresh_feedback();
+      return false;
     }
+    if (edits.length === 0)
+    {
+      this.refresh_feedback();
+      return true;
+    }
+    this.last_edit = edits.map(({ key, vector }) => ({
+      key, vector, value: vector ? this.current_object[key].toArray().slice(0, 3) : this.current_object[key]
+    }));
+    this.write_edits(edits);
+    return true;
+  }
+
+  write_edits(edits)
+  {
     const obj = this.current_object;
+    if (edits.some(({ vector }) => vector)) this.ui_controller.panel.contents.animations.stop_all();
     for (const { key, value, vector } of edits)
     {
       if (vector) obj[key].set(...value);
@@ -373,8 +398,47 @@ class Details extends ResizableWindow
     if (edits.some(({ vector }) => vector)) obj.updateMatrix();
     obj.updateWorldMatrix(true, true);
     this.ui_controller.handle_object_update(obj, edits, this.current_instance_id);
-    this.is_editing = false;
-    this.show_object_details();
+    this.refresh_values(edits.map(({ key }) => key));
+  }
+
+  undo_last_edit()
+  {
+    if (!this.last_edit || !this.current_object) return;
+    const edits = this.last_edit;
+    this.last_edit = null;
+    this.write_edits(edits);
+  }
+
+  refresh_values(keys)
+  {
+    const obj = this.current_object;
+    for (const editor of this.editors)
+    {
+      if (!keys.includes(editor.key)) continue;
+      editor.inputs.forEach((input, index) =>
+      {
+        if (editor.boolean) input.checked = obj[editor.key];
+        else if (editor.vector) input.value = obj[editor.key][['x', 'y', 'z'][index]];
+        else input.value = editor.key === 'userData' ? JSON.stringify(obj.userData, null, 2) : obj[editor.key];
+      });
+      editor.original = editor.inputs.map(input => editor.boolean ? input.checked : input.value);
+      editor.error = '';
+    }
+    const box = new Box3().setFromObject(obj);
+    obj.globalPosition = box.getCenter(new Vector3());
+    obj.globalScale = box.getSize(new Vector3());
+    for (const { key, content } of this.readonly_items) content.textContent = this.format_value(obj, key);
+    this.$undo.disabled = !this.last_edit;
+    this.refresh_feedback();
+  }
+
+  refresh_feedback()
+  {
+    this.$error.textContent = this.editors.map(editor => editor.error).filter(Boolean).join('\n');
+    for (const editor of this.editors)
+    {
+      for (const input of editor.inputs) input.setAttribute('aria-invalid', String(!!editor.error));
+    }
   }
 
   create_material_button(material)

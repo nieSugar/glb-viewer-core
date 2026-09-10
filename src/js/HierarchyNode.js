@@ -239,6 +239,13 @@ class HierarchyNode
   {
     e.stopPropagation();
     this.toggle_visibility();
+    const details = this.panel.ui_controller.details;
+    if (details.current_object)
+    {
+      if (details.last_edit?.some(({ key }) => key === 'visible')) details.last_edit = null;
+      details.refresh_values(['visible']);
+      this.panel.ui_controller.handle_object_update(details.current_object, [], details.current_instance_id);
+    }
   }
 
   highlight()

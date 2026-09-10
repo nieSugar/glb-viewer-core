@@ -326,8 +326,7 @@ class SceneController
   prepare_for_new_model()
   {
     // A reloaded model must not leave an editor pointing at disposed objects.
-    this.ui_controller.details.is_editing = false;
-    this.ui_controller.details.reset_details();
+    this.ui_controller.details.reset_details(true);
     this.loader.manager.setURLModifier(url => url);
     this.revoke_active_object_urls();
     this.animation_controller.reset();
@@ -482,6 +481,11 @@ class SceneController
     this.selected_instanced_mesh.removeFromParent();
     this.selected_mesh.removeFromParent();
     this.selected_empty_object.removeFromParent();
+
+    for (let parent = obj; parent; parent = parent.parent)
+    {
+      if (!parent.visible) return;
+    }
 
     if (obj.geometry)
     {

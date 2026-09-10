@@ -7,6 +7,17 @@
     box-sizing: border-box;
   }
 
+  .details.resize-window {
+    width: min(440px, calc(100vw - 20px));
+    height: min(680px, calc(100vh - 74px));
+  }
+
+  .details__content-wrapper {
+    flex: 1;
+    min-height: 0;
+    height: auto !important;
+  }
+
   .details__header {
     display: flex;
 
@@ -93,7 +104,7 @@
 
     padding: 10 * $ptr;
 
-    font-size: 11 * $ptr;
+    font-size: 12 * $ptr;
 
     background: #222;
 
@@ -194,11 +205,12 @@
 
   .details__toolbar {
     display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
     gap: 8 * $ptr;
-    position: sticky;
-    top: 0;
-    z-index: 1;
     padding: 10 * $ptr;
+    font-size: 12 * $ptr;
     background: var(--background-color);
 
     button {
@@ -209,6 +221,11 @@
       border: 1px solid var(--border-color);
       border-radius: $border-radius;
       cursor: pointer;
+
+      &:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
     }
   }
 
@@ -221,11 +238,23 @@
   }
 
   .details__hint {
+    flex-shrink: 0;
     color: var(--text-color-alt);
+  }
+
+  .details__feedback {
+    flex-shrink: 0;
+    height: 56px;
+    overflow-y: auto;
+
+    &:has(.details__error:not(:empty)) .details__hint {
+      display: none;
+    }
   }
 
   .details__error {
     color: #ffb4ab;
+    white-space: pre-line;
 
     &:empty {
       display: none;
@@ -248,7 +277,7 @@
     textarea {
       width: 100%;
       min-width: 0;
-      padding: 5 * $ptr;
+      padding: 8 * $ptr;
       color: var(--text-color);
       font: inherit;
       background: var(--background-color-dark);
@@ -260,4 +289,52 @@
     textarea {
       resize: vertical;
     }
+
+    [aria-invalid='true'] {
+      border-color: #ffb4ab;
+    }
+
+    input[type='checkbox'] {
+      appearance: none;
+      position: relative;
+      flex-shrink: 0;
+      width: 42px;
+      height: 26px;
+      margin: 0;
+      background: #555;
+      border: 1px solid #888;
+      border-radius: 12px;
+      cursor: pointer;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background: #fff;
+        border-radius: 50%;
+      }
+
+      &:checked {
+        background: #287d61;
+        border-color: #50af8e;
+
+        &::before {
+          transform: translateX(16px);
+        }
+      }
+    }
+  }
+
+  .details__item--editable:hover {
+    cursor: default;
+  }
+
+  .details__item--visible {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--background-color-alt);
   }
