@@ -33,6 +33,23 @@ class MainApplication
     this.ui_controller.init(this.scene_controller);
     this.scene_controller.init(this.ui_controller);
 
+    document.addEventListener('keydown', event =>
+    {
+      const target = event.target;
+      const is_editing = target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target.isContentEditable;
+
+      if (event.key.toLowerCase() !== 'h' || event.repeat || event.ctrlKey || event.metaKey || event.altKey || is_editing)
+      {
+        return;
+      }
+
+      const hidden = document.body.classList.toggle('controls-hidden');
+      parent.postMessage({ type: 'controlsHidden', hidden: hidden }, '*');
+    });
+
     this._chunked_transfers = new Map();
 
     // Listen for messages from the extension
@@ -94,6 +111,9 @@ class MainApplication
         break;
       case 'updateLanguage':
         this.ui_controller.set_language(message.language);
+        break;
+      case 'setControlsHidden':
+        document.body.classList.toggle('controls-hidden', message.hidden);
         break;
       }
     });

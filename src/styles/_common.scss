@@ -78,6 +78,14 @@ div.hidden {
   display: none;
 }
 
+body.controls-hidden {
+  .button,
+  .core-language-switch,
+  .settings {
+    display: none !important;
+  }
+}
+
 .faded {
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
