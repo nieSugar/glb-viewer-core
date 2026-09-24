@@ -403,8 +403,6 @@ class MaterialDetails extends ResizableWindow
     $thumbnail_container.appendChild($thumbnail);
     $content.appendChild($thumbnail_container);
 
-    $detail_item.appendChild($thumbnail);
-
     this.$content.appendChild($detail_item);
   }
 }

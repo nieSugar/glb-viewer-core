@@ -18,7 +18,7 @@ class HierarchySearchController
   {
     const user_input = e.target.value;
     const regex = new RegExp(user_input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    const matches = this.tree.first_node.find_nodes_by_name_regex(regex);
+    const matches = this.tree.first_node?.find_nodes_by_name_regex(regex) || [];
 
     // const to_log = matches.map(node => node.object3d.name);
     // console.log(to_log);
@@ -41,7 +41,7 @@ class HierarchySearchController
   handle_search_input_focus()
   {
     this.tree.$container.querySelector('.resize-content-wrapper').scrollTop = 0;
-    this.tree.$content_container.classList.add('hidden');
+    this.tree.$tree_content.classList.add('hidden');
     this.$search_results.classList.remove('hidden');
     this.$search_icon.classList.add('tree-search__icon--focused');
     this.$search_clear_icon.classList.remove('hidden');
@@ -49,7 +49,7 @@ class HierarchySearchController
 
   clear_search_input()
   {
-    this.tree.$content_container.classList.remove('hidden');
+    this.tree.$tree_content.classList.remove('hidden');
     this.$search_results.classList.add('hidden');
     this.$search_input.value = '';
     this.$search_results.innerHTML = '';

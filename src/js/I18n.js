@@ -293,9 +293,9 @@ class I18n
 
   property_label(key, prettify = true)
   {
+    if (!prettify) return key;
     const translated = this.translations[this.current_language].properties[key];
     if (translated) return translated;
-    if (!prettify) return key;
     const spaced = key.replace(/([A-Z])/g, ' $1').toLowerCase();
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }

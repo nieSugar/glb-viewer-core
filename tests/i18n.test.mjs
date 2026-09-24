@@ -31,6 +31,7 @@ try
   }
 
   assert.equal(i18n.property_label('castShadow'), '投射阴影');
+  assert.equal(i18n.property_label('castShadow', false), 'castShadow');
   assert.equal(i18n.t('materialType'), '类型');
   assert.equal(i18n.t('infoBytes', { count: 42, size: 42, unit: 'B' }), '42 字节（42 B）');
   const { MaterialDetails } = await server.ssrLoadModule('/src/js/MaterialDetails.js');
@@ -44,6 +45,7 @@ try
   assert.deepEqual(properties.find(([key]) => key === 'materialSide'), ['materialSide', 'FrontSide']);
   i18n.current_language = 'en';
   assert.equal(i18n.property_label('castShadow'), 'Cast shadow');
+  assert.equal(i18n.property_label('castShadow', false), 'castShadow');
   assert.equal(i18n.t('materialType'), 'Type');
   assert.equal(i18n.t('materialSide'), 'Side');
   console.log('Localization checks passed.');

@@ -106,7 +106,7 @@ class Info extends ResizableWindow
     this.create_node('file-size', t('infoFileSize'), this.format_file_size(this.scene_controller.file_size));
     this.create_node('drawcalls', t('infoDrawcalls'), this.scene_controller.scene_drawcall_count);
 
-    this.create_node('geometries', t('geometriesTitle'), gltf.parser.json.buffers?.length || 0);
+    this.create_node('geometries', t('geometriesTitle'), this.panel.contents.geometries.get_geometries_count());
     this.create_node('textures', t('texturesTitle'), gltf.parser.json.textures?.length || 0);
     this.create_node('animations', t('animationsTitle'), gltf.animations.length);
     this.create_node('materials', t('materialsTitle'), gltf.parser.json.materials?.length || 0);

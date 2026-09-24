@@ -148,6 +148,7 @@ class Textures extends ResizableWindow
 
   async build_textures_list()
   {
+    this.$rows_container.innerHTML = '';
     const texture_rows = [];
     for (let i = 0; i < this.texture_items.length; i++)
     {

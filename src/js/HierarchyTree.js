@@ -8,12 +8,13 @@ class HierarchyTree extends ResizableWindow
   {
     const container = document.querySelector('.tree');
     const drag_handle = container.querySelector('.tree-header');
-    const content_container = container.querySelector('.tree-content');
+    const content_container = container.querySelector('.resize-content-wrapper');
 
     super(container, drag_handle, content_container);
 
     this.name = name;
     this.panel = panel;
+    this.$tree_content = container.querySelector('.tree-content');
     this.$close_button = this.$container.querySelector('.tree-header__close');
 
     this.$close_button.addEventListener('click', this.handle_close_button_click.bind(this));
@@ -46,7 +47,7 @@ class HierarchyTree extends ResizableWindow
   {
     this.first_node = new HierarchyNode(object3d, this.panel, this);
     const $node = this.first_node.get_element();
-    this.$content_container.replaceChildren($node);
+    this.$tree_content.replaceChildren($node);
 
     this.first_node.expand_down_until_depth(3);
     this.first_node.sort_by_name();
