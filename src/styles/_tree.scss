@@ -1,4 +1,8 @@
   .tree {
+    .resize-content-wrapper {
+      flex: 1;
+      min-height: 0;
+    }
   }
 
   .tree-node {
@@ -158,6 +162,10 @@
     position: relative;
 
     padding: 8 * $ptr;
+
+    flex-shrink: 0;
+
+    background: var(--background-color);
   }
 
   .tree-search-results {

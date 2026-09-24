@@ -41,6 +41,21 @@ class UIController
     return this.i18n.t(key, values);
   }
 
+  property_label(key, prettify)
+  {
+    return this.i18n.property_label(key, prettify);
+  }
+
+  texture_channel_label(channel)
+  {
+    return this.i18n.texture_channel_label(channel);
+  }
+
+  type_label(type)
+  {
+    return this.i18n.type_label(type);
+  }
+
   set_language(language)
   {
     this.i18n.set_language(language);
@@ -52,6 +67,11 @@ class UIController
     }
 
     this.panel.refresh_localized_labels();
+    this.details.refresh_localized_labels();
+    const info = this.panel.contents.info;
+    if (info.scene_controller?.gltf && !info.$container.classList.contains('hidden')) info.fill_info();
+    const material_details = this.panel.contents.materials.material_details;
+    if (material_details.material && !material_details.$container.classList.contains('hidden')) material_details.create_material_details();
   }
 
   get_current_language()
@@ -85,7 +105,7 @@ class UIController
     const node = this.panel.contents.hierarchy.find_node_by_object3d(object3d);
     if (node)
     {
-      node.$label.textContent = (object3d.name || object3d.type) + (node.total_children_count > 0 ? ` (${node.total_children_count})` : '');
+      node.$label.textContent = (object3d.name || this.type_label(object3d.type)) + (node.total_children_count > 0 ? ` (${node.total_children_count})` : '');
       node.$action.innerHTML = object3d.visible ? node.icons.ICON_OPEN_EYE : node.icons.ICON_CLOSED_EYE;
     }
     if (edits.some(({ key }) => key === 'name'))

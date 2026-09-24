@@ -148,6 +148,7 @@ class Details extends ResizableWindow
 
       const $new_details_item = document.createElement('div');
       $new_details_item.classList.add('details__item');
+      $new_details_item.dataset.detailKey = key;
 
       const $item_label = document.createElement('div');
       const $item_content = document.createElement('div');
@@ -174,9 +175,9 @@ class Details extends ResizableWindow
       if (key === 'type' && obj.isInstancedMesh)
       {
         const $instanced_item_content = document.createElement('div');
-        $instanced_item_content.classList.add('details__item-content');
+        $instanced_item_content.classList.add('details__item-content', 'details__instance-count');
         $new_details_item.appendChild($instanced_item_content);
-        $instanced_item_content.textContent = `Instance count: ${obj.count} (${obj.geometry.attributes.position.count * obj.count} vertices)`;
+        $instanced_item_content.textContent = this.ui_controller.t('detailsInstanceCount', { count: obj.count, vertices: obj.geometry.attributes.position.count * obj.count });
       }
 
       const $item_copy_icon = document.createElement('div');
@@ -225,11 +226,12 @@ class Details extends ResizableWindow
 
   format_value(obj, key)
   {
-    const value = obj[key] ?? 'undefined';
+    const value = obj[key] ?? this.ui_controller.t('detailsUndefined');
     if (key === 'type' && obj.geometry)
     {
-      return `${this.get_mesh_type(obj)} (${obj.geometry.attributes.position.count} vertices)`;
+      return `${this.ui_controller.type_label(this.get_mesh_type(obj))} (${this.ui_controller.t('detailsVertexCount', { count: obj.geometry.attributes.position.count })})`;
     }
+    if (key === 'type') return this.ui_controller.type_label(value);
     if (value.isVector3 || value.isEuler)
     {
       return ['x', 'y', 'z'].map(axis => value[axis].toFixed(2)).join(', ');
@@ -249,7 +251,7 @@ class Details extends ResizableWindow
     for (const axis of vector ? ['x', 'y', 'z'] : [''])
     {
       const input = document.createElement(key === 'userData' ? 'textarea' : 'input');
-      input.setAttribute('aria-label', key + (axis ? ` ${axis.toUpperCase()}` : ''));
+      input.setAttribute('aria-label', this.prettify_name(key) + (axis ? ` ${axis.toUpperCase()}` : ''));
       if (vector)
       {
         input.type = 'number';
@@ -334,7 +336,7 @@ class Details extends ResizableWindow
         if (vector)
         {
           value = inputs.map(input => input.value.trim() === '' ? NaN : Number(input.value));
-          if (!value.every(Number.isFinite)) throw new Error(this.ui_controller.t('detailsInvalidNumber', { key }));
+          if (!value.every(Number.isFinite)) throw new Error(this.ui_controller.t('detailsInvalidNumber', { key: this.prettify_name(key) }));
         }
         if (key === 'userData')
         {
@@ -448,8 +450,8 @@ class Details extends ResizableWindow
     $material_button.classList.add('button');
     $material_button.classList.add('details__material-button');
 
-    $material_button.textContent = 'Open material details';
-    $material_button.title = 'Click to view material details';
+    $material_button.textContent = this.ui_controller.t('openMaterialDetails');
+    $material_button.title = this.ui_controller.t('openMaterialDetailsHint');
 
     $material_button.addEventListener('click', (e) =>
     {
@@ -541,14 +543,40 @@ class Details extends ResizableWindow
 
   prettify_name(name)
   {
-    if (this.prettify_property_labels)
+    return this.ui_controller.property_label(name, this.prettify_property_labels);
+  }
+
+  refresh_localized_labels()
+  {
+    this.fill_settings_list();
+    for (const item of this.$content.querySelectorAll('.details__item[data-detail-key]'))
     {
-      const spaced = name.replace(/([A-Z])/g, ' $1').toLowerCase();
-      return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+      const key = item.dataset.detailKey;
+      item.querySelector('.details__item-label').textContent = this.prettify_name(key) + ': ';
     }
-    else
+    for (const editor of this.editors)
     {
-      return name;
+      editor.inputs.forEach((input, index) =>
+      {
+        input.setAttribute('aria-label', this.prettify_name(editor.key) + (editor.vector ? ` ${['X', 'Y', 'Z'][index]}` : ''));
+      });
+    }
+    for (const { key, content } of this.readonly_items) content.textContent = this.format_value(this.current_object, key);
+    const instance_count = this.$content.querySelector('.details__instance-count');
+    if (instance_count)
+    {
+      const obj = this.current_object;
+      instance_count.textContent = this.ui_controller.t('detailsInstanceCount', { count: obj.count, vertices: obj.geometry.attributes.position.count * obj.count });
+    }
+    for (const button of this.$content.querySelectorAll('.details__material-button'))
+    {
+      button.textContent = this.ui_controller.t('openMaterialDetails');
+      button.title = this.ui_controller.t('openMaterialDetailsHint');
+    }
+    if (this.editors.some(editor => editor.error))
+    {
+      try { this.read_edits(); } catch {}
+      this.refresh_feedback();
     }
   }
 

@@ -17,6 +17,7 @@ class MaterialDetails extends ResizableWindow
 
     this.panel = panel;
     this.material = null;
+    this.render_id = 0;
 
     this.$header_message = document.querySelector('.material-details__header-message');
     this.$header_title = document.querySelector('.material-details__header-title');
@@ -72,6 +73,7 @@ class MaterialDetails extends ResizableWindow
 
   reset_details()
   {
+    this.render_id++;
     this.material = null;
     this.meshes = [];
     this.$content.innerHTML = '';
@@ -95,6 +97,7 @@ class MaterialDetails extends ResizableWindow
 
   create_material_details()
   {
+    this.render_id++;
     this.$content.innerHTML = '';
     // console.log(this.material.isMeshBasicMaterial, this.material.isMeshStandardMaterial, this.material.isMeshPhysicalMaterial);
     if (this.material.isMeshBasicMaterial)
@@ -118,7 +121,7 @@ class MaterialDetails extends ResizableWindow
   {
     const copied = await this.try_copy_to_clipboard(String(text));
 
-    this.$header_message.textContent = copied ? 'Copied to clipboard' : 'Copy failed';
+    this.$header_message.textContent = this.t(copied ? 'copiedToClipboard' : 'copyFailed');
     this.$header_title.classList.add('hidden');
     this.$header_message.classList.remove('faded');
 
@@ -200,17 +203,22 @@ class MaterialDetails extends ResizableWindow
     });
   }
 
+  t(key, values = {})
+  {
+    return this.panel.ui_controller.t(key, values);
+  }
+
   __display_base_material_properties(type)
   {
-    this.create_property_element('Name', this.material.name || `Material ${this.material.uuid}`);
-    this.create_property_element('Type', type);
-    this.create_property_element('Transparent', this.material.transparent);
+    this.create_property_element('materialName', this.material.name || this.t('unnamedMaterialWithId', { id: this.material.uuid }));
+    this.create_property_element('materialType', this.panel.ui_controller.type_label(type));
+    this.create_property_element('materialTransparent', this.t(this.material.transparent ? 'yes' : 'no'));
     if (this.material.transparent)
     {
-      this.create_property_element('Opacity', this.material.opacity);
+      this.create_property_element('materialOpacity', this.material.opacity);
     }
-    this.create_property_element('Side', this.material.side === DoubleSide ? 'DoubleSide' : this.material.side === FrontSide ? 'FrontSide' : 'BackSide');
-    this.create_property_element('User data', JSON.stringify(this.material.userData));
+    this.create_property_element('materialSide', this.t(this.material.side === DoubleSide ? 'materialDoubleSide' : this.material.side === FrontSide ? 'materialFrontSide' : 'materialBackSide'));
+    this.create_property_element('materialUserData', JSON.stringify(this.material.userData));
   }
 
   display_basic_material()
@@ -219,62 +227,62 @@ class MaterialDetails extends ResizableWindow
 
     if (this.material.alphaMap)
     {
-      this.create_texture_property_element('Alpha map', this.material.alphaMap);
+      this.create_texture_property_element('materialAlphaMap', this.material.alphaMap);
     }
-    this.create_color_property_element('Color', '#' + this.material.color.getHexString());
+    this.create_color_property_element('materialColor', '#' + this.material.color.getHexString());
 
     if (this.material.lightMap)
     {
-      this.create_texture_property_element('Light map', this.material.lightMap);
+      this.create_texture_property_element('materialLightMap', this.material.lightMap);
     }
 
     if (this.material.map)
     {
-      this.create_texture_property_element('Map', this.material.map);
+      this.create_texture_property_element('materialMap', this.material.map);
     }
 
     if (this.material.specularMap)
     {
-      this.create_texture_property_element('Specular map', this.material.specularMap);
+      this.create_texture_property_element('materialSpecularMap', this.material.specularMap);
     }
   }
 
   display_standard_material(type = 'MeshStandardMaterial')
   {
     this.__display_base_material_properties(type);
-    this.create_color_property_element('Color', '#' + this.material.color.getHexString());
-    this.create_property_element('Emissive intensity', this.material.emissiveIntensity);
-    this.create_color_property_element('Emissive color', '#' + this.material.emissive.getHexString());
-    this.create_property_element('Metalness', this.material.metalness);
-    this.create_property_element('Roughness', this.material.roughness);
+    this.create_color_property_element('materialColor', '#' + this.material.color.getHexString());
+    this.create_property_element('materialEmissiveIntensity', this.material.emissiveIntensity);
+    this.create_color_property_element('materialEmissiveColor', '#' + this.material.emissive.getHexString());
+    this.create_property_element('materialMetalness', this.material.metalness);
+    this.create_property_element('materialRoughness', this.material.roughness);
 
     if (this.material.map)
     {
-      this.create_texture_property_element('Map', this.material.map);
+      this.create_texture_property_element('materialMap', this.material.map);
     }
     if (this.material.alphaMap)
     {
-      this.create_texture_property_element('Alpha map', this.material.alphaMap);
+      this.create_texture_property_element('materialAlphaMap', this.material.alphaMap);
     }
     if (this.material.aoMap)
     {
-      this.create_texture_property_element('Ao map', this.material.aoMap);
+      this.create_texture_property_element('materialAoMap', this.material.aoMap);
     }
     if (this.material.normalMap)
     {
-      this.create_texture_property_element('Normal map', this.material.normalMap);
+      this.create_texture_property_element('materialNormalMap', this.material.normalMap);
     }
     if (this.material.emissiveMap)
     {
-      this.create_texture_property_element('Emissive map', this.material.emissiveMap);
+      this.create_texture_property_element('materialEmissiveMap', this.material.emissiveMap);
     }
     if (this.material.metalnessMap)
     {
-      this.create_texture_property_element('Metalness map', this.material.metalnessMap);
+      this.create_texture_property_element('materialMetalnessMap', this.material.metalnessMap);
     }
     if (this.material.roughnessMap)
     {
-      this.create_texture_property_element('Metalness map', this.material.roughnessMap);
+      this.create_texture_property_element('materialRoughnessMap', this.material.roughnessMap);
     }
   }
 
@@ -282,43 +290,49 @@ class MaterialDetails extends ResizableWindow
   {
     this.display_standard_material('MeshPhysicalMaterial');
 
-    this.create_property_element('Transmission', this.material.transmission);
-    this.create_property_element('Clearcoat', this.material.clearcoat);
-    this.create_property_element('IOR', this.material.ior);
-    this.create_property_element('Specular intensity', this.material.specularIntensity);
-    this.create_color_property_element('Specular color', '#' + this.material.specularColor.getHexString());
+    this.create_property_element('materialTransmission', this.material.transmission);
+    this.create_property_element('materialClearcoat', this.material.clearcoat);
+    this.create_property_element('materialIor', this.material.ior);
+    this.create_property_element('materialSpecularIntensity', this.material.specularIntensity);
+    this.create_color_property_element('materialSpecularColor', '#' + this.material.specularColor.getHexString());
 
     if (this.material.clearcoatMap)
     {
-      this.create_texture_property_element('Clearcoat map', this.material.clearcoatMap);
+      this.create_texture_property_element('materialClearcoatMap', this.material.clearcoatMap);
     }
     if (this.material.specularColorMap)
     {
-      this.create_texture_property_element('Specular map', this.material.specularColorMap);
+      this.create_texture_property_element('materialSpecularColorMap', this.material.specularColorMap);
     }
     if (this.material.transmissionMap)
     {
-      this.create_texture_property_element('Transmission map', this.material.transmissionMap);
+      this.create_texture_property_element('materialTransmissionMap', this.material.transmissionMap);
     }
   }
 
-  create_property_element(name, value)
+  create_property_element(key, value)
   {
+    const label = this.t(key);
     const $detail_item = document.createElement('div');
+    const $label = document.createElement('div');
+    const $content = document.createElement('div');
     $detail_item.className = 'material-details__item';
-    $detail_item.innerHTML = `
-        <div class="material-details__item-label">${name}</div>
-        <div class="material-details__item-content">${value}</div>
-      `;
+    $label.className = 'material-details__item-label';
+    $content.className = 'material-details__item-content';
+    $label.textContent = label;
+    $content.textContent = value;
+    $detail_item.appendChild($label);
+    $detail_item.appendChild($content);
     $detail_item.addEventListener('click', () =>
     {
-      this.copy_to_clipboard(name + ': ' + value);
+      this.copy_to_clipboard(label + ': ' + value);
     });
     this.$content.appendChild($detail_item);
   }
 
-  create_color_property_element(name, value)
+  create_color_property_element(key, value)
   {
+    const label = this.t(key);
     const $detail_item = document.createElement('div');
     const $label = document.createElement('div');
     const $content = document.createElement('div');
@@ -330,7 +344,7 @@ class MaterialDetails extends ResizableWindow
     $content.className = 'material-details__item-content';
     $color_box.className = 'material-details__item-color-box';
 
-    $label.textContent = name;
+    $label.textContent = label;
     $color_box.style.backgroundColor = value;
     $value.textContent = value;
 
@@ -342,14 +356,16 @@ class MaterialDetails extends ResizableWindow
 
     $content.addEventListener('click', () =>
     {
-      this.copy_to_clipboard(name + ': ' + value);
+      this.copy_to_clipboard(label + ': ' + value);
     });
 
     this.$content.appendChild($detail_item);
   }
 
-  async create_texture_property_element(name, map)
+  async create_texture_property_element(key, map)
   {
+    const label = this.t(key);
+    const render_id = this.render_id;
     const $detail_item = document.createElement('div');
     const $label = document.createElement('div');
     const $content = document.createElement('div');
@@ -367,11 +383,12 @@ class MaterialDetails extends ResizableWindow
       $thumbnail.style.imageRendering = 'pixelated';
     }
 
-    $label.textContent = name;
-    $content.textContent = map.name || 'Unnamed texture';
+    $label.textContent = label;
+    $content.textContent = map.name || this.t('unnamedTexture');
 
     const image_bitmap = await this.panel.contents.textures.get_image_bitmap(map);
     const image_bitmap_data_url = this.panel.contents.textures.image_bitmap_to_data_url(image_bitmap);
+    if (render_id !== this.render_id) return;
 
     $thumbnail.src = image_bitmap_data_url;
 
@@ -380,7 +397,7 @@ class MaterialDetails extends ResizableWindow
 
     $detail_item.addEventListener('click', () =>
     {
-      this.copy_to_clipboard(name + ': ' + map.name);
+      this.copy_to_clipboard(label + ': ' + (map.name || this.t('unnamedTexture')));
     });
 
     $thumbnail_container.appendChild($thumbnail);

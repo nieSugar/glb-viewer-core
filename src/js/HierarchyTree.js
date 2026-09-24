@@ -46,10 +46,14 @@ class HierarchyTree extends ResizableWindow
   {
     this.first_node = new HierarchyNode(object3d, this.panel, this);
     const $node = this.first_node.get_element();
-    this.$content_container.appendChild($node);
+    this.$content_container.replaceChildren($node);
 
     this.first_node.expand_down_until_depth(3);
     this.first_node.sort_by_name();
+    if (this.search_controller.$search_input.value)
+    {
+      this.search_controller.handle_search_input({ target: this.search_controller.$search_input });
+    }
     // this.first_node.sort_by_index();
   }
 

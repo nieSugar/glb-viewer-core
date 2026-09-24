@@ -40,6 +40,7 @@ class HierarchySearchController
 
   handle_search_input_focus()
   {
+    this.tree.$container.querySelector('.resize-content-wrapper').scrollTop = 0;
     this.tree.$content_container.classList.add('hidden');
     this.$search_results.classList.remove('hidden');
     this.$search_icon.classList.add('tree-search__icon--focused');

@@ -71,9 +71,9 @@ class GeometryItem
 
   init()
   {
-    const base_name = this.meshes[0].isInstancedMesh ? 'InstancedGeometry' : 'Geometry';
-    this.columns.name.textContent = this.geometry.name || `${base_name} ${this.index + 1}`;
-    this.columns.name.title = this.geometry.name || `${base_name} ${this.index + 1}`;
+    const fallback_name = this.parent.panel.ui_controller.t(this.meshes[0].isInstancedMesh ? 'instancedGeometryFallback' : 'geometryFallback', { index: this.index + 1 });
+    this.columns.name.textContent = this.geometry.name || fallback_name;
+    this.columns.name.title = this.geometry.name || fallback_name;
     this.columns.vertex_count.textContent = `${this.get_vertex_count()}`;
 
     this.mesh_elements = [];

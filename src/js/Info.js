@@ -96,40 +96,41 @@ class Info extends ResizableWindow
 
   fill_info()
   {
+    const t = this.panel.ui_controller.t.bind(this.panel.ui_controller);
     const gltf = this.scene_controller.gltf;
     const model_vertices = this.model_vertex_count(this.scene_controller.model);
     const vertices = this.rendered_vertex_count(this.scene_controller.model);
     const instanced_vertices = this.instanced_vertex_count(this.scene_controller.model);
     this.$content.innerHTML = '';
 
-    this.create_node('file-size', 'File size', this.format_file_size(this.scene_controller.file_size));
-    this.create_node('drawcalls', 'Drawcalls',   this.scene_controller.scene_drawcall_count);
+    this.create_node('file-size', t('infoFileSize'), this.format_file_size(this.scene_controller.file_size));
+    this.create_node('drawcalls', t('infoDrawcalls'), this.scene_controller.scene_drawcall_count);
 
-    this.create_node('geometries', 'Geometries', gltf.parser.json.buffers?.length || 0);
-    this.create_node('textures', 'Textures',     gltf.parser.json.textures?.length || 0);
-    this.create_node('animations', 'Animations', gltf.animations.length);
-    this.create_node('materials', 'Materials',   gltf.parser.json.materials?.length || 0);
-    this.create_node('images', 'Images',         gltf.parser.json.images?.length || 0);
+    this.create_node('geometries', t('geometriesTitle'), gltf.parser.json.buffers?.length || 0);
+    this.create_node('textures', t('texturesTitle'), gltf.parser.json.textures?.length || 0);
+    this.create_node('animations', t('animationsTitle'), gltf.animations.length);
+    this.create_node('materials', t('materialsTitle'), gltf.parser.json.materials?.length || 0);
+    this.create_node('images', t('infoImages'), gltf.parser.json.images?.length || 0);
 
     if (instanced_vertices > 0)
     {
-      this.create_node('model-vertices', 'Model vertices',     model_vertices);
-      this.create_node('drawn-vertices', 'Drawn vertices',     vertices + instanced_vertices);
-      this.create_node('regular-vertices',   '---> Regular Vertices', vertices);
-      this.create_node('instanced-vertices', '---> Instanced vertices', instanced_vertices);
-      this.create_node('generator', 'Generator',  gltf.asset.generator || 'Unknown');
+      this.create_node('model-vertices', t('infoModelVertices'), model_vertices);
+      this.create_node('drawn-vertices', t('infoDrawnVertices'), vertices + instanced_vertices);
+      this.create_node('regular-vertices', `↳ ${t('infoRegularVertices')}`, vertices);
+      this.create_node('instanced-vertices', `↳ ${t('infoInstancedVertices')}`, instanced_vertices);
+      this.create_node('generator', t('infoGenerator'), gltf.asset.generator || t('unknownType'));
     }
     else
     {
-      this.create_node('model-vertices', 'Vertices',     model_vertices);
+      this.create_node('model-vertices', t('infoVertices'), model_vertices);
     }
     if (gltf.parser.json.extensionsUsed)
     {
-      this.create_node('extensions', 'Extensions', gltf.parser.json.extensionsUsed.length > 0 ? (gltf.parser.json.extensionsUsed.join('<br> ')) : 'None');
+      this.create_node('extensions', t('infoExtensions'), gltf.parser.json.extensionsUsed.length > 0 ? gltf.parser.json.extensionsUsed.join(', ') : t('infoNone'));
     }
     else
     {
-      this.create_node('extensions', 'Extensions', 'None');
+      this.create_node('extensions', t('infoExtensions'), t('infoNone'));
     }
   }
 
@@ -154,8 +155,8 @@ class Info extends ResizableWindow
     $label.classList.add('info-node__label');
     $value.classList.add('info-node__value');
 
-    $label.innerHTML = label;
-    $value.innerHTML = value;
+    $label.textContent = label;
+    $value.textContent = value;
 
     $node.appendChild($label);
     $node.appendChild($value);
@@ -211,7 +212,7 @@ class Info extends ResizableWindow
 
   format_file_size(bytes)
   {
-    if (!bytes || bytes === 0) return 'Unknown';
+    if (!bytes || bytes === 0) return this.panel.ui_controller.t('unknownType');
 
     const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
@@ -227,7 +228,7 @@ class Info extends ResizableWindow
     // Format with appropriate decimal places
     const formatted = unitIndex === 0 ? size.toString() : size.toFixed(2);
     const dot_separated = bytes.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return `${dot_separated} bytes (${formatted} ${units[unitIndex]})`;
+    return this.panel.ui_controller.t('infoBytes', { count: dot_separated, size: formatted, unit: units[unitIndex] });
     // return `${dot_separated} bytes`;
   }
 }

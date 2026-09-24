@@ -83,8 +83,8 @@ class TextureItem
       material_elem.title = material.material_name || this.parent.t('unknownMaterial');
 
       type_elem.classList.add('textures-table__type-name');
-      type_elem.textContent = material.channel || this.parent.t('unknownType');
-      type_elem.title = material.channel || this.parent.t('unknownType');
+      type_elem.textContent = material.channel ? this.parent.panel.ui_controller.texture_channel_label(material.channel) : this.parent.t('unknownType');
+      type_elem.title = type_elem.textContent;
 
       this.mesh_elements.push(mesh_elem);
       this.material_elements.push(material_elem);
