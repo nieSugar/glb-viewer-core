@@ -35,7 +35,6 @@ try
   details.ui_controller = {
     t: key => key,
     property_label: key => key,
-    type_label: type => type,
     handle_object_update: () => updates++,
     panel: { contents: { animations: { stop_all: () => stopped++ } } }
   };

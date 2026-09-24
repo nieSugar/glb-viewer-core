@@ -61,7 +61,7 @@ class HierarchyNode
 
     this.$label = document.createElement('div');
     this.$label.className = 'tree-node__label';
-    this.$label.textContent = (this.object3d.name || this.panel.ui_controller.type_label(this.object3d.type)) + (this.total_children_count > 0 ? ` (${this.total_children_count})` : '');
+    this.$label.textContent = (this.object3d.name || this.object3d.type) + (this.total_children_count > 0 ? ` (${this.total_children_count})` : '');
 
     this.$label_wrapper = document.createElement('div');
     this.$label_wrapper.className = 'tree-node__label-wrapper';

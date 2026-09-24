@@ -211,13 +211,13 @@ class MaterialDetails extends ResizableWindow
   __display_base_material_properties(type)
   {
     this.create_property_element('materialName', this.material.name || this.t('unnamedMaterialWithId', { id: this.material.uuid }));
-    this.create_property_element('materialType', this.panel.ui_controller.type_label(type));
+    this.create_property_element('materialType', type);
     this.create_property_element('materialTransparent', this.t(this.material.transparent ? 'yes' : 'no'));
     if (this.material.transparent)
     {
       this.create_property_element('materialOpacity', this.material.opacity);
     }
-    this.create_property_element('materialSide', this.t(this.material.side === DoubleSide ? 'materialDoubleSide' : this.material.side === FrontSide ? 'materialFrontSide' : 'materialBackSide'));
+    this.create_property_element('materialSide', this.material.side === DoubleSide ? 'DoubleSide' : this.material.side === FrontSide ? 'FrontSide' : 'BackSide');
     this.create_property_element('materialUserData', JSON.stringify(this.material.userData));
   }
 

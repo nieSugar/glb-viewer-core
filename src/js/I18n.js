@@ -102,9 +102,6 @@ class I18n
         materialSpecularColor: 'Specular color',
         materialClearcoatMap: 'Clearcoat map',
         materialTransmissionMap: 'Transmission map',
-        materialDoubleSide: 'DoubleSide',
-        materialFrontSide: 'FrontSide',
-        materialBackSide: 'BackSide',
         unnamedMaterialWithId: 'Material {id}',
         unnamedTexture: 'Unnamed texture',
         geometryFallback: 'Geometry {index}',
@@ -130,10 +127,7 @@ class I18n
         meshCount: '{count} meshes',
         typeCount: '{count} types',
         materialCount: '{count} materials',
-        properties: {},
-        textureChannels: {},
-        objectTypes: {},
-        materialTypes: {}
+        properties: {}
       },
       zh: {
         pageTitle: 'GLB 查看器',
@@ -232,9 +226,6 @@ class I18n
         materialSpecularColor: '高光颜色',
         materialClearcoatMap: '清漆层贴图',
         materialTransmissionMap: '透射贴图',
-        materialDoubleSide: '双面',
-        materialFrontSide: '正面',
-        materialBackSide: '背面',
         unnamedMaterialWithId: '材质 {id}',
         unnamedTexture: '未命名贴图',
         geometryFallback: '几何体 {index}',
@@ -266,29 +257,6 @@ class I18n
           userData: '自定义数据', layers: '图层', matrix: '变换矩阵',
           matrixWorld: '世界矩阵', up: '上方向', children: '子对象', parent: '父对象',
           frustumCulled: '视锥剔除', globalScale: '全局尺寸', globalPosition: '全局位置'
-        },
-        textureChannels: {
-          map: '基础贴图', emissiveMap: '自发光贴图', roughnessMap: '粗糙度贴图',
-          metalnessMap: '金属度贴图', aoMap: '环境光遮蔽贴图', normalMap: '法线贴图',
-          displacementMap: '位移贴图', alphaMap: '透明度贴图', envMap: '环境贴图',
-          lightMap: '光照贴图', reflectionMap: '反射贴图', specularMap: '高光贴图',
-          sheenColorMap: '光泽颜色贴图', sheenRoughnessMap: '光泽粗糙度贴图',
-          clearcoatColorMap: '清漆层颜色贴图', clearcoatRoughnessMap: '清漆层粗糙度贴图',
-          coatColorMap: '涂层颜色贴图', coatRoughnessMap: '涂层粗糙度贴图',
-          coatNormalMap: '涂层法线贴图', coatNormalScaleMap: '涂层法线强度贴图'
-        },
-        objectTypes: {
-          Group: '组', Scene: '场景', Object3D: '三维对象', Mesh: '网格',
-          SkinnedMesh: '蒙皮网格', InstancedMesh: '实例化网格', Bone: '骨骼',
-          Line: '线', LineSegments: '线段', Points: '点云', Sprite: '精灵',
-          PerspectiveCamera: '透视相机', OrthographicCamera: '正交相机',
-          DirectionalLight: '平行光', PointLight: '点光源', SpotLight: '聚光灯'
-        },
-        materialTypes: {
-          MeshBasicMaterial: '基础网格材质', MeshStandardMaterial: '标准网格材质',
-          MeshPhysicalMaterial: '物理网格材质', MeshPhongMaterial: 'Phong 网格材质',
-          MeshLambertMaterial: 'Lambert 网格材质', LineBasicMaterial: '基础线材质',
-          PointsMaterial: '点材质', SpriteMaterial: '精灵材质'
         }
       }
     };
@@ -330,17 +298,6 @@ class I18n
     if (!prettify) return key;
     const spaced = key.replace(/([A-Z])/g, ' $1').toLowerCase();
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-  }
-
-  texture_channel_label(channel)
-  {
-    return this.translations[this.current_language].textureChannels[channel] || channel;
-  }
-
-  type_label(type)
-  {
-    const active = this.translations[this.current_language];
-    return active.objectTypes[type] || active.materialTypes[type] || type;
   }
 
   apply_to_dom(root = document)

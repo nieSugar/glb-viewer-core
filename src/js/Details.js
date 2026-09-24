@@ -229,9 +229,8 @@ class Details extends ResizableWindow
     const value = obj[key] ?? this.ui_controller.t('detailsUndefined');
     if (key === 'type' && obj.geometry)
     {
-      return `${this.ui_controller.type_label(this.get_mesh_type(obj))} (${this.ui_controller.t('detailsVertexCount', { count: obj.geometry.attributes.position.count })})`;
+      return `${this.get_mesh_type(obj)} (${this.ui_controller.t('detailsVertexCount', { count: obj.geometry.attributes.position.count })})`;
     }
-    if (key === 'type') return this.ui_controller.type_label(value);
     if (value.isVector3 || value.isEuler)
     {
       return ['x', 'y', 'z'].map(axis => value[axis].toFixed(2)).join(', ');

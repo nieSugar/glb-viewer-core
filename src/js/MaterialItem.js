@@ -52,7 +52,7 @@ class MaterialItem
   {
     this.columns.name.textContent = this.material.name || this.parent.panel.ui_controller.t('unnamedMaterialWithId', { id: this.material.uuid });
     this.columns.name.title = this.parent.panel.ui_controller.t('openDetailsHint');
-    this.columns.type.textContent = this.parent.panel.ui_controller.type_label(this.material.type);
+    this.columns.type.textContent = this.material.type;
 
     this.columns.name.addEventListener('click', this.handle_more_button_click.bind(this));
 
