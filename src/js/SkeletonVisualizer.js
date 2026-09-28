@@ -6,11 +6,13 @@ export class SkeletonVisualizer extends Object3D
   {
     super();
     this.bones = [];
-    this.bones_mesh_dic = {};
+    this.bones_mesh_dic = new Map();
   }
 
   init_from_scene(scene)
   {
+    this.reset();
+    if (!scene) return;
     this.collect_bones(scene);
 
     for (let i = 0; i < this.bones.length; i++)
@@ -39,8 +41,20 @@ export class SkeletonVisualizer extends Object3D
         this.add(endpoint);
         mesh = endpoint;
       }
-      this.bones_mesh_dic[bone.name] = mesh;
+      this.bones_mesh_dic.set(bone, mesh);
     }
+  }
+
+  reset()
+  {
+    for (const helper of this.children)
+    {
+      helper.geometry.dispose();
+      helper.material.dispose();
+    }
+    this.clear();
+    this.bones = [];
+    this.bones_mesh_dic.clear();
   }
 
   collect_bones(scene)
@@ -58,8 +72,7 @@ export class SkeletonVisualizer extends Object3D
   {
     for (let i = 0; i < this.bones.length; i++)
     {
-      const name = this.bones[i].name;
-      this.bones_mesh_dic[name].visible = false;
+      this.bones_mesh_dic.get(this.bones[i]).visible = false;
     }
   }
 
@@ -67,8 +80,8 @@ export class SkeletonVisualizer extends Object3D
   {
     bone.traverse(child =>
     {
-      const name = child.name;
-      this.bones_mesh_dic[name].visible = true;
+      const helper = this.bones_mesh_dic.get(child);
+      if (helper) helper.visible = true;
     });
   }
 
@@ -77,7 +90,7 @@ export class SkeletonVisualizer extends Object3D
     for (let i = 0; i < this.bones.length; i++)
     {
       const bone = this.bones[i];
-      const mesh = this.bones_mesh_dic[bone.name];
+      const mesh = this.bones_mesh_dic.get(bone);
 
       if (bone.children.length > 0)
       {

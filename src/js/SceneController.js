@@ -15,6 +15,7 @@ import {
   GridHelper,
   HemisphereLight,
   InstancedMesh,
+  LoadingManager,
   MathUtils,
   Matrix4,
   Mesh,
@@ -74,8 +75,6 @@ class SceneController
     this.controls = new OrbitControls(this.camera, dom_container);
     this.controls.update();
 
-    this.loader = new GLTFLoader();
-
     this.ktx2_loader = new KTX2Loader();
     this.draco_loader = new DRACOLoader();
     this.meshopt_decoder = MeshoptDecoder;
@@ -129,7 +128,8 @@ class SceneController
     this.skeleton_visualizer = new SkeletonVisualizer();
     this.overlay_scene.add(this.skeleton_visualizer);
     this.scene_drawcall_count = 0;
-    this.active_object_urls = [];
+    this._load_generation = 0;
+    this._load_operations = new Set();
   }
 
   init(ui_controller)
@@ -154,23 +154,20 @@ class SceneController
   {
     console.log('Setting WebView URI:', webview_path);
 
-    this.draco_loader.setDecoderPath(`${webview_path}/lib/draco/`);
-    this.ktx2_loader.setTranscoderPath(`${webview_path}/lib/basis/`);
+    const normalized_path = webview_path.replace(/\/+$/, '');
+    this.draco_loader.setDecoderPath(`${normalized_path}/lib/draco/`);
+    this.ktx2_loader.setTranscoderPath(`${normalized_path}/lib/basis/`);
 
     // detectSupport returns a Promise; resolution must happen before any KTX2
     // texture is decoded. Track it so loadModel* can await it if needed.
     this._ktx2_ready = this.ktx2_loader.detectSupport(this.renderer.renderer);
 
-    this.loader.setDRACOLoader(this.draco_loader);
-    this.loader.setKTX2Loader(this.ktx2_loader);
-    this.loader.setMeshoptDecoder(this.meshopt_decoder);
   }
 
   loadModelFromBase64(base64, extension, fileSize)
   {
-    this.file_size = fileSize || 0;
     const binary = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    this.loadModelFromBinary(binary.buffer, extension || 'glb', this.file_size);
+    this.loadModelFromBinary(binary.buffer, extension || 'glb', fileSize);
   }
 
   loadModelFromBinary(arrayBuffer, extension, fileSize)
@@ -183,17 +180,11 @@ class SceneController
 
     this.prepare_for_new_model();
     this.file_size = fileSize || 0;
+    const request = this.create_load_request();
 
     const mime_type = extension === 'gltf' ? 'model/gltf+json' : 'model/gltf-binary';
-    const object_url = this.create_object_url(new Blob([arrayBuffer], { type: mime_type }));
-
-    this._await_loaders_ready().then(() =>
-    {
-      this.loader.load(object_url, (gltf) =>
-      {
-        this.on_model_loaded(gltf);
-      }, undefined, console.error);
-    });
+    const object_url = this.create_object_url(new Blob([arrayBuffer], { type: mime_type }), request);
+    this.load_model_request(request, object_url);
   }
 
   loadModelFromFiles(files, entryFileName, fileSize)
@@ -206,12 +197,13 @@ class SceneController
 
     this.prepare_for_new_model();
     this.file_size = fileSize || 0;
+    const request = this.create_load_request();
 
     const resource_urls = new Map();
 
     files.forEach(file =>
     {
-      const object_url = this.create_object_url(new Blob([file.data], { type: file.mimeType || 'application/octet-stream' }));
+      const object_url = this.create_object_url(new Blob([file.data], { type: file.mimeType || 'application/octet-stream' }), request);
       const normalized_name = this.normalize_resource_key(file.name);
 
       resource_urls.set(normalized_name, object_url);
@@ -222,24 +214,12 @@ class SceneController
     if (!entry_file_url)
     {
       console.error('Entry GLTF file was not found in the provided file list');
-      this.loader.manager.setURLModifier(url => url);
+      this.cleanup_load_request(request);
       return;
     }
 
-    this.loader.manager.setURLModifier(url => this.resolve_resource_url(url, resource_urls));
-
-    this._await_loaders_ready().then(() =>
-    {
-      this.loader.load(entry_file_url, (gltf) =>
-      {
-        this.loader.manager.setURLModifier(url => url);
-        this.on_model_loaded(gltf);
-      }, undefined, (error) =>
-      {
-        this.loader.manager.setURLModifier(url => url);
-        console.error(error);
-      });
-    });
+    request.url_modifier = url => this.resolve_resource_url(url, resource_urls);
+    this.load_model_request(request, entry_file_url);
   }
 
   loadModelFromUri(dataUri, fileSize)
@@ -253,13 +233,95 @@ class SceneController
 
     this.prepare_for_new_model();
     this.file_size = fileSize || 0;
+    const request = this.create_load_request();
+    this.load_model_request(request, dataUri);
+  }
+
+  create_load_request()
+  {
+    const request = { generation: this._load_generation, object_urls: [], started: false };
+    this._load_operations.add(request);
+    return request;
+  }
+
+  load_model_request(request, uri)
+  {
     this._await_loaders_ready().then(() =>
     {
-      this.loader.load(dataUri, (gltf) =>
+      if (request.generation !== this._load_generation)
       {
-        this.on_model_loaded(gltf);
-      }, undefined, console.error);
+        this.cleanup_load_request(request);
+        return;
+      }
+
+      const manager = new LoadingManager();
+      if (request.url_modifier)
+      {
+        manager.setURLModifier(request.url_modifier);
+      }
+      const loader = this.create_request_loader(manager);
+      request.started = true;
+
+      try
+      {
+        loader.load(uri, gltf =>
+        {
+          try
+          {
+            if (request.generation === this._load_generation)
+            {
+              this.on_model_loaded(gltf);
+            }
+            else
+            {
+              this.dispose_model_resources(gltf.scene);
+            }
+          }
+          finally
+          {
+            this.cleanup_load_request(request);
+          }
+        }, undefined, error =>
+        {
+          this.cleanup_load_request(request);
+          if (request.generation === this._load_generation)
+          {
+            console.error(error);
+          }
+        });
+      }
+      catch (error)
+      {
+        this.cleanup_load_request(request);
+        if (request.generation === this._load_generation)
+        {
+          console.error(error);
+        }
+      }
+    }).catch(error =>
+    {
+      this.cleanup_load_request(request);
+      if (request.generation === this._load_generation)
+      {
+        console.error(error);
+      }
     });
+  }
+
+  create_request_loader(manager)
+  {
+    const loader = new GLTFLoader(manager);
+    loader.setDRACOLoader(this.draco_loader);
+    loader.setKTX2Loader(this.create_request_ktx2_loader(manager));
+    loader.setMeshoptDecoder(this.meshopt_decoder);
+    return loader;
+  }
+
+  create_request_ktx2_loader(manager)
+  {
+    return {
+      load: (url, onLoad, onProgress, onError) => this.ktx2_loader.load(manager.resolveURL(url), onLoad, onProgress, onError)
+    };
   }
 
   _await_loaders_ready()
@@ -325,11 +387,19 @@ class SceneController
 
   prepare_for_new_model()
   {
+    this._load_generation++;
+    this._load_operations.forEach(request =>
+    {
+      if (!request.started)
+      {
+        this.cleanup_load_request(request);
+      }
+    });
     // A reloaded model must not leave an editor pointing at disposed objects.
     this.ui_controller.details.reset_details(true);
-    this.loader.manager.setURLModifier(url => url);
-    this.revoke_active_object_urls();
     this.animation_controller.reset();
+    this.skeleton_visualizer.reset?.();
+    this.ui_controller.panel?.contents?.animations?.reset?.();
 
     if (!this.model)
     {
@@ -342,15 +412,38 @@ class SceneController
     this.normal_helpers = [];
     this.tangent_helpers = [];
 
-    const disposed_textures = new Set();
+    this.dispose_model_resources(this.model);
 
-    this.model.traverse(child =>
+    this.model.removeFromParent();
+    this.model = null;
+    this.gltf = null;
+  }
+
+  create_object_url(blob, request)
+  {
+    const object_url = URL.createObjectURL(blob);
+    request?.object_urls.push(object_url);
+    return object_url;
+  }
+
+  cleanup_load_request(request)
+  {
+    if (request.cleaned)
     {
-      if (child.geometry)
-      {
-        child.geometry.dispose();
-      }
+      return;
+    }
+    request.cleaned = true;
+    request.object_urls.forEach(object_url => URL.revokeObjectURL(object_url));
+    this._load_operations.delete(request);
+  }
 
+  dispose_model_resources(model)
+  {
+    if (!model) return;
+    const disposed_textures = new Set();
+    model.traverse(child =>
+    {
+      child.geometry?.dispose();
       if (child.material)
       {
         const materials = Array.isArray(child.material) ? child.material : [child.material];
@@ -358,37 +451,16 @@ class SceneController
         {
           Object.values(material).forEach(value =>
           {
-            if (value && value.isTexture && !disposed_textures.has(value))
+            if (value?.isTexture && !disposed_textures.has(value))
             {
               disposed_textures.add(value);
               value.dispose();
             }
           });
-
           material.dispose();
         });
       }
     });
-
-    this.model.removeFromParent();
-    this.model = null;
-    this.gltf = null;
-  }
-
-  create_object_url(blob)
-  {
-    const object_url = URL.createObjectURL(blob);
-    this.active_object_urls.push(object_url);
-    return object_url;
-  }
-
-  revoke_active_object_urls()
-  {
-    this.active_object_urls.forEach(object_url =>
-    {
-      URL.revokeObjectURL(object_url);
-    });
-    this.active_object_urls = [];
   }
 
   resolve_resource_url(url, resource_urls)
@@ -436,7 +508,7 @@ class SceneController
         raycaster.setFromCamera(this.input.NDC, this.camera);
         const intersections = raycaster.intersectObject(this.model, true);
 
-        const visible_intersection = intersections.find(inter => inter.object.visible);
+        const visible_intersection = intersections.find(inter => this.is_effectively_visible(inter.object));
         if (visible_intersection)
         {
           this.handle_object_click(visible_intersection.object, visible_intersection.instanceId);
@@ -451,6 +523,16 @@ class SceneController
     this.skeleton_visualizer.update();
     this.renderer.render(this.scene, this.camera, this.overlay_scene);
     this.input.clear();
+  }
+
+  is_effectively_visible(object)
+  {
+    for (let current = object; current; current = current.parent)
+    {
+      if (!current.visible) return false;
+      if (current === this.model) return true;
+    }
+    return false;
   }
 
   getWorldSizeFromScreenSize(desiredScreenSize, target_pos, camera)
@@ -828,6 +910,9 @@ class SceneController
 
   set_fov(value)
   {
+    value = Number(value);
+    if (!Number.isFinite(value)) return;
+    value = MathUtils.clamp(value, 1, 179);
     const fovRatio = Math.tan(MathUtils.degToRad(this.camera.fov) / 2) / Math.tan(MathUtils.degToRad(value) / 2);
 
     const direction = new Vector3();

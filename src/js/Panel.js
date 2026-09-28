@@ -78,6 +78,9 @@ class Panel
 
   on_model_loaded(model)
   {
+    this.buttons.animations.classList.add('hidden');
+    this.contents.animations.init(this.scene_controller);
+
     if (this.contents.info.get_texture_count() > 0)
     {
       this.buttons.textures.classList.remove('hidden');
@@ -96,7 +99,6 @@ class Panel
     if (this.contents.info.get_animation_count() > 0)
     {
       this.buttons.animations.classList.remove('hidden');
-      this.contents.animations.init(this.scene_controller);
     }
   }
 

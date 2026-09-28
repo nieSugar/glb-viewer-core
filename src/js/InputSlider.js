@@ -13,6 +13,9 @@ class InputSlider
     this.$container.classList.add('slider');
     this.$input = document.createElement('input');
     this.$input.type = 'number';
+    this.$input.min = min;
+    this.$input.max = max;
+    this.$input.step = step;
     this.$input.classList.add('slider-value');
     this.$bar = document.createElement('div');
     this.$bar.classList.add('slider-bar');
@@ -40,17 +43,17 @@ class InputSlider
     this.$input.focus();
   }
 
-  handle_slider_mousedown()
+  handle_slider_mousedown(event)
   {
     this.is_dragging = true;
-    this.update_slider_value();
+    this.update_slider_value(event);
   }
 
   handle_slider_mousemove(event)
   {
     if (!this.is_dragging) return;
     document.body.style.cursor = 'ew-resize';
-    this.update_slider_value();
+    this.update_slider_value(event);
   }
 
   handle_slider_mouseup()
@@ -61,8 +64,8 @@ class InputSlider
 
   handle_slider_input()
   {
-    const value = parseFloat(this.$input.value);
-    if (!isNaN(value))
+    const value = Number(this.$input.value);
+    if (this.$input.value.trim() !== '' && Number.isFinite(this.min) && Number.isFinite(this.max) && this.max > this.min && Number.isFinite(value) && value >= this.min && value <= this.max)
     {
       this.current_value = value;
       this.update_slider_bar();
@@ -77,21 +80,21 @@ class InputSlider
 
   handle_slider_blur()
   {
-    const value = parseFloat(this.$input.value);
-    if (isNaN(value))
+    const value = Number(this.$input.value);
+    if (this.$input.value.trim() === '' || !Number.isFinite(this.min) || !Number.isFinite(this.max) || this.max <= this.min || !Number.isFinite(value) || value < this.min || value > this.max)
     {
       this.$input.value = this.current_value;
     }
   }
 
-  update_slider_value()
+  update_slider_value(event)
   {
     const rect = this.$container.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, x / rect.width));
     const value = this.min + (this.max - this.min) * percentage;
     this.current_value = Math.round(value / this.step) * this.step;
-    this.current_value = this.current_value.toFixed(2);
+    this.current_value = Number(this.current_value.toFixed(2));
     this.$input.value = this.current_value;
     this.callback(this.current_value);
     this.update_slider_bar();

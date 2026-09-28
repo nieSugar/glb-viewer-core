@@ -104,6 +104,10 @@ class MaterialDetails extends ResizableWindow
     {
       this.display_basic_material();
     }
+    else if (this.material.isPointsMaterial || this.material.isLineBasicMaterial)
+    {
+      this.display_color_material(this.material.isPointsMaterial ? 'PointsMaterial' : 'LineBasicMaterial');
+    }
     else
     {
       if (this.material.isMeshPhysicalMaterial)
@@ -244,6 +248,20 @@ class MaterialDetails extends ResizableWindow
     if (this.material.specularMap)
     {
       this.create_texture_property_element('materialSpecularMap', this.material.specularMap);
+    }
+  }
+
+  display_color_material(type)
+  {
+    this.__display_base_material_properties(type);
+    this.create_color_property_element('materialColor', '#' + this.material.color.getHexString());
+    if (this.material.map)
+    {
+      this.create_texture_property_element('materialMap', this.material.map);
+    }
+    if (this.material.alphaMap)
+    {
+      this.create_texture_property_element('materialAlphaMap', this.material.alphaMap);
     }
   }
 

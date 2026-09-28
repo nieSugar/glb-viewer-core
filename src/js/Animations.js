@@ -25,14 +25,17 @@ class Animations extends ResizableWindow
     this.$close_button.addEventListener('click', this.handle_close_button_click.bind(this));
 
     this.animation_items = [];
+    this.handle_stop_all = this.stop_all.bind(this);
+    this.handle_play_all = this.play_all.bind(this);
   }
 
   init(scene_controller)
   {
+    this.reset();
     this.scene_controller = scene_controller;
 
-    this.$stop_all.addEventListener('click', this.stop_all.bind(this));
-    this.$play_all.addEventListener('click', this.play_all.bind(this));
+    this.$stop_all.addEventListener('click', this.handle_stop_all);
+    this.$play_all.addEventListener('click', this.handle_play_all);
 
     const animations = this.list_animations();
     for (let i = 0; i < animations.length; i++)
@@ -43,6 +46,16 @@ class Animations extends ResizableWindow
       this.animation_items.push(item);
       this.$list.appendChild(item.$container);
     }
+  }
+
+  reset()
+  {
+    this.$stop_all?.removeEventListener('click', this.handle_stop_all);
+    this.$play_all?.removeEventListener('click', this.handle_play_all);
+    this.animation_items = [];
+    this.$list.innerHTML = '';
+    this.$container?.classList.add('hidden');
+    this.panel?.deactivate_button?.(this.name);
   }
 
   show()
