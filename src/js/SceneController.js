@@ -325,8 +325,10 @@ class SceneController
 
   _await_loaders_ready()
   {
-    return this._ktx2_ready ? Promise.resolve(this._ktx2_ready).catch(() =>
-    {}) : Promise.resolve();
+    return this._ktx2_ready
+      ? Promise.resolve(this._ktx2_ready).catch(() =>
+      {})
+      : Promise.resolve();
   }
 
   on_model_loaded(gltf)
