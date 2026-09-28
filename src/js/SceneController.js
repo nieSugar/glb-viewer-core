@@ -161,7 +161,6 @@ class SceneController
     // detectSupport returns a Promise; resolution must happen before any KTX2
     // texture is decoded. Track it so loadModel* can await it if needed.
     this._ktx2_ready = this.ktx2_loader.detectSupport(this.renderer.renderer);
-
   }
 
   loadModelFromBase64(base64, extension, fileSize)
@@ -326,7 +325,8 @@ class SceneController
 
   _await_loaders_ready()
   {
-    return this._ktx2_ready ? Promise.resolve(this._ktx2_ready).catch(() => {}) : Promise.resolve();
+    return this._ktx2_ready ? Promise.resolve(this._ktx2_ready).catch(() =>
+    {}) : Promise.resolve();
   }
 
   on_model_loaded(gltf)
